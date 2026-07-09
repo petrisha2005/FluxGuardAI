@@ -1,9 +1,11 @@
+@import './tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   font-family:
     Inter,
     ui-sans-serif,
@@ -17,10 +19,14 @@
 body {
   margin: 0;
   min-width: 320px;
+  background:
+    radial-gradient(circle at top left, rgb(56 189 248 / 0.14), transparent 30rem),
+    linear-gradient(135deg, #07111f 0%, #0a1322 46%, #09111d 100%);
+  color: #f8fafc;
 }
 
 *:focus-visible {
-  outline: 3px solid #2563eb;
+  outline: 3px solid #38bdf8;
   outline-offset: 2px;
 }
 
