@@ -13,9 +13,7 @@ describe('App', () => {
     );
 
     expect(screen.getByRole('navigation', { name: /primary navigation/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /predictive crowd orchestration/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /operations command center/i })).toBeInTheDocument();
   });
 
   it('provides an accessible skip link and live loading status', () => {
@@ -26,6 +24,8 @@ describe('App', () => {
     );
 
     expect(screen.getByText(/skip to main content/i)).toHaveAttribute('href', '#main-content');
-    expect(screen.getByRole('status', { name: /foundation ready/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('status', { name: /dashboard is using live simulated/i }),
+    ).toBeInTheDocument();
   });
 });
