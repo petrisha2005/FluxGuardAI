@@ -1,13 +1,18 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core import database
+from app.core.security import require_roles
 from app.core.websocket import manager
 from app.schemas.alert import AlertResponse, AlertUpdate
 from app.schemas.base import StandardResponse
 
-router = APIRouter(prefix="/events/{eventId}/alerts", tags=["alerts"])
+router = APIRouter(
+    prefix="/events/{eventId}/alerts",
+    tags=["alerts"],
+    dependencies=[Depends(require_roles(["operator", "organizer"]))],
+)
 
 
 @router.get("", response_model=StandardResponse)

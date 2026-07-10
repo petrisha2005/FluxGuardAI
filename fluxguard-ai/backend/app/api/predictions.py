@@ -1,9 +1,10 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core import database
+from app.core.security import require_roles
 from app.core.websocket import manager
 from app.schemas.alert import AlertResponse
 from app.schemas.base import StandardResponse
@@ -11,7 +12,11 @@ from app.schemas.prediction import PredictionResponse
 from app.schemas.risk import RiskScoreResponse
 from app.services import prediction, risk
 
-router = APIRouter(prefix="/events/{eventId}/predictions", tags=["predictions"])
+router = APIRouter(
+    prefix="/events/{eventId}/predictions",
+    tags=["predictions"],
+    dependencies=[Depends(require_roles(["operator", "organizer"]))],
+)
 
 
 @router.get("", response_model=StandardResponse)

@@ -1,14 +1,19 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core import database
+from app.core.security import require_roles
 from app.core.websocket import manager
 from app.schemas.base import StandardResponse
 from app.schemas.guidance import GuidanceGenerateRequest, GuidanceResponse
 from app.services import guidance
 
-router = APIRouter(prefix="/events/{eventId}/guidance", tags=["guidance"])
+router = APIRouter(
+    prefix="/events/{eventId}/guidance",
+    tags=["guidance"],
+    dependencies=[Depends(require_roles(["operator", "organizer"]))],
+)
 
 
 @router.post("/generate", response_model=StandardResponse, status_code=status.HTTP_201_CREATED)

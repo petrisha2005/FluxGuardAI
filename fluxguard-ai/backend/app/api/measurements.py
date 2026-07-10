@@ -1,14 +1,19 @@
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core import database
+from app.core.security import require_roles
 from app.core.websocket import manager
 from app.schemas.base import StandardResponse
 from app.schemas.measurement import MeasurementCreate, MeasurementResponse
 
-router = APIRouter(prefix="/events/{eventId}/measurements", tags=["measurements"])
+router = APIRouter(
+    prefix="/events/{eventId}/measurements",
+    tags=["measurements"],
+    dependencies=[Depends(require_roles(["operator", "organizer", "volunteer"]))],
+)
 
 
 @router.post("", response_model=StandardResponse, status_code=status.HTTP_201_CREATED)

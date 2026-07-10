@@ -1,13 +1,18 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core import database
+from app.core.security import require_roles
 from app.schemas.base import StandardResponse
 from app.schemas.event import EventResponse
 from app.schemas.zone import ZoneResponse
 
-router = APIRouter(prefix="/events", tags=["events"])
+router = APIRouter(
+    prefix="/events",
+    tags=["events"],
+    dependencies=[Depends(require_roles(["operator", "organizer", "volunteer"]))],
+)
 
 
 @router.get("", response_model=StandardResponse)

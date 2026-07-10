@@ -1,13 +1,18 @@
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core import database
+from app.core.security import require_roles
 from app.schemas.base import StandardResponse
 from app.schemas.feedback import FeedbackCreate, FeedbackResponse
 
-router = APIRouter(prefix="/events/{eventId}/feedback", tags=["feedback"])
+router = APIRouter(
+    prefix="/events/{eventId}/feedback",
+    tags=["feedback"],
+    dependencies=[Depends(require_roles(["fan", "volunteer", "operator", "organizer"]))],
+)
 
 
 @router.post("", response_model=StandardResponse, status_code=status.HTTP_201_CREATED)

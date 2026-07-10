@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     )
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     database_url: str | None = Field(default=None, alias="DATABASE_URL")
+    jwt_secret: str | None = Field(default=None, alias="JWT_SECRET")
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    jwt_audience: str | None = Field(default=None, alias="JWT_AUDIENCE")
 
     model_config = SettingsConfigDict(
         env_file=".env",
