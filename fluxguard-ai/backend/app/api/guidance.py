@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 
 from app.core import database
+from app.core.websocket import manager
 from app.schemas.base import StandardResponse
 from app.schemas.guidance import GuidanceGenerateRequest, GuidanceResponse
 from app.services import guidance
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/events/{eventId}/guidance", tags=["guidance"])
 
 
 @router.post("/generate", response_model=StandardResponse, status_code=status.HTTP_201_CREATED)
-def generate_guidance(eventId: UUID, payload: GuidanceGenerateRequest):
+async def generate_guidance(eventId: UUID, payload: GuidanceGenerateRequest):
     """Generate role-specific guidance for a safety alert."""
     event = database.get_event_by_id(eventId)
     if not event:
@@ -55,4 +56,13 @@ def generate_guidance(eventId: UUID, payload: GuidanceGenerateRequest):
             },
         ) from e
 
-    return StandardResponse(data=GuidanceResponse(**record))
+    response_obj = GuidanceResponse(**record)
+
+    # Broadcast guidance update
+    await manager.broadcast_to_event(
+        str(eventId),
+        "guidance_created",
+        response_obj.model_dump(by_alias=True, mode="json"),
+    )
+
+    return StandardResponse(data=response_obj)

@@ -4,8 +4,11 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core import database
+from app.core.websocket import manager
+from app.schemas.alert import AlertResponse
 from app.schemas.base import StandardResponse
 from app.schemas.prediction import PredictionResponse
+from app.schemas.risk import RiskScoreResponse
 from app.services import prediction, risk
 
 router = APIRouter(prefix="/events/{eventId}/predictions", tags=["predictions"])
@@ -36,7 +39,7 @@ def get_predictions(
 
 
 @router.post("/run", response_model=StandardResponse, status_code=status.HTTP_202_ACCEPTED)
-def run_prediction_cycle(eventId: UUID):
+async def run_prediction_cycle(eventId: UUID):
     """Trigger dynamic forecast prediction run and evaluate risk scoring."""
     event = database.get_event_by_id(eventId)
     if not event:
@@ -55,5 +58,26 @@ def run_prediction_cycle(eventId: UUID):
 
     # 2. Score risks and spawn alerts
     risk.evaluate_and_score_risks(eventId, new_predictions)
+
+    # 3. Retrieve and format objects to broadcast
+    predictions_payload = [
+        PredictionResponse(**p).model_dump(by_alias=True, mode="json") for p in new_predictions
+    ]
+
+    latest_scores = database.get_latest_risk_scores(eventId)
+    risk_scores_payload = [
+        RiskScoreResponse(**s).model_dump(by_alias=True, mode="json") for s in latest_scores
+    ]
+
+    active_alerts = database.get_alerts(eventId, status="unacknowledged")
+    alerts_payload = [
+        AlertResponse(**a).model_dump(by_alias=True, mode="json") for a in active_alerts
+    ]
+
+    # 4. Broadcast live channel events
+    await manager.broadcast_to_event(str(eventId), "prediction_updated", predictions_payload)
+    await manager.broadcast_to_event(str(eventId), "risk_score_updated", risk_scores_payload)
+    for alert_p in alerts_payload:
+        await manager.broadcast_to_event(str(eventId), "alert_created", alert_p)
 
     return StandardResponse(data=[PredictionResponse(**p) for p in new_predictions])

@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core import database
+from app.core.websocket import manager
 from app.schemas.alert import AlertResponse, AlertUpdate
 from app.schemas.base import StandardResponse
 
@@ -34,7 +35,7 @@ def list_alerts(
 
 
 @router.post("/{alertId}/acknowledge", response_model=StandardResponse)
-def acknowledge_alert(eventId: UUID, alertId: UUID):
+async def acknowledge_alert(eventId: UUID, alertId: UUID):
     """Mark an alert acknowledged by operator."""
     event = database.get_event_by_id(eventId)
     if not event:
@@ -72,11 +73,20 @@ def acknowledge_alert(eventId: UUID, alertId: UUID):
         )
 
     updated_alert = database.update_alert(alertId, status="acknowledged")
-    return StandardResponse(data=AlertResponse(**updated_alert))
+    response_obj = AlertResponse(**updated_alert)
+
+    # Broadcast alert update
+    await manager.broadcast_to_event(
+        str(eventId),
+        "alert_updated",
+        response_obj.model_dump(by_alias=True, mode="json"),
+    )
+
+    return StandardResponse(data=response_obj)
 
 
 @router.patch("/{alertId}", response_model=StandardResponse)
-def patch_alert(eventId: UUID, alertId: UUID, payload: AlertUpdate):
+async def patch_alert(eventId: UUID, alertId: UUID, payload: AlertUpdate):
     """Update alert status, assignee, or notes."""
     event = database.get_event_by_id(eventId)
     if not event:
@@ -108,4 +118,13 @@ def patch_alert(eventId: UUID, alertId: UUID, payload: AlertUpdate):
         notes=payload.notes,
         assignee=payload.assignee,
     )
-    return StandardResponse(data=AlertResponse(**updated_alert))
+    response_obj = AlertResponse(**updated_alert)
+
+    # Broadcast alert update
+    await manager.broadcast_to_event(
+        str(eventId),
+        "alert_updated",
+        response_obj.model_dump(by_alias=True, mode="json"),
+    )
+
+    return StandardResponse(data=response_obj)

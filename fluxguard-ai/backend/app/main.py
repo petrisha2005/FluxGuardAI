@@ -9,6 +9,7 @@ from app.api.health import router as health_router
 from app.api.measurements import router as measurements_router
 from app.api.predictions import router as predictions_router
 from app.api.risk import router as risk_router
+from app.api.websocket import router as ws_router
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
 
     register_exception_handlers(app)
     app.include_router(health_router)
+    app.include_router(ws_router)
     app.include_router(events_router, prefix=settings.api_v1_prefix)
     app.include_router(measurements_router, prefix=settings.api_v1_prefix)
     app.include_router(predictions_router, prefix=settings.api_v1_prefix)

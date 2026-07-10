@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, HTTPException, status
 
 from app.core import database
+from app.core.websocket import manager
 from app.schemas.base import StandardResponse
 from app.schemas.measurement import MeasurementCreate, MeasurementResponse
 
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/events/{eventId}/measurements", tags=["measurements"
 
 
 @router.post("", response_model=StandardResponse, status_code=status.HTTP_201_CREATED)
-def create_measurement(eventId: UUID, payload: MeasurementCreate):
+async def create_measurement(eventId: UUID, payload: MeasurementCreate):
     """Ingest crowd measurement from simulator or trusted integration."""
     event = database.get_event_by_id(eventId)
     if not event:
@@ -55,4 +56,13 @@ def create_measurement(eventId: UUID, payload: MeasurementCreate):
 
     database.add_measurement(measurement_record)
 
-    return StandardResponse(data=MeasurementResponse(**measurement_record))
+    response_obj = MeasurementResponse(**measurement_record)
+
+    # Broadcast zone status update
+    await manager.broadcast_to_event(
+        str(eventId),
+        "zone_status_updated",
+        response_obj.model_dump(by_alias=True, mode="json"),
+    )
+
+    return StandardResponse(data=response_obj)
