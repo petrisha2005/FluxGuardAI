@@ -51,7 +51,7 @@ async def test_run_predictions_cycle() -> None:
         assert len(json_data_run["data"]) == 12
         p = json_data_run["data"][0]
         assert "horizonMinutes" in p
-        assert p["modelVersion"] == "prophet-mvp-v1.0"
+        assert p["modelVersion"] == "prophet-mvp-v1.0-enriched"
 
         # Query back predictions
         response_get = await client.get(f"/api/v1/events/{SEED_EVENT_ID}/predictions")

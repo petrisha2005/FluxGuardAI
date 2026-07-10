@@ -130,7 +130,8 @@ export function setupFetchMocks() {
       !url.includes('/alerts') &&
       !url.includes('/feedback') &&
       !url.includes('/guidance') &&
-      !url.includes('/measurements')
+      !url.includes('/measurements') &&
+      !url.includes('/integrations')
     ) {
       responseData = { data: [mockBackendEvent] };
     } else if (url.includes('/zones')) {
@@ -147,6 +148,29 @@ export function setupFetchMocks() {
       responseData = { data: mockBackendGuidance };
     } else if (url.includes('/feedback')) {
       responseData = { data: { success: true } };
+    } else if (url.includes('/integrations')) {
+      responseData = {
+        data: {
+          weather: {
+            status: 'clear',
+            exit_rate_modifier: 1.0,
+            description: 'Clear sky',
+            temperature_celsius: 22.0,
+          },
+          transit: {
+            status: 'on_time',
+            next_arrival: '15s',
+            passenger_count: 0,
+            description: 'No active surges',
+          },
+          ticketScans: {
+            total_scans_last_minute: 120,
+            active_turnstiles: 16,
+            average_scans_per_turnstile: 7.5,
+            status: 'normal',
+          },
+        },
+      };
     }
 
     return Promise.resolve({

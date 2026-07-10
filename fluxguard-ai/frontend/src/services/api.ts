@@ -124,4 +124,26 @@ export const api = {
     const host = baseUrl.replace(/^https?:\/\//, '');
     return `${wsProto}//${host}/ws/events/${eventId}`;
   },
+
+  fetchIntegrationsStatus: (eventId: string) =>
+    request<{
+      weather: {
+        status: string;
+        exit_rate_modifier: number;
+        description: string;
+        temperature_celsius: number;
+      };
+      transit: {
+        status: string;
+        next_arrival: string;
+        passenger_count: number;
+        description: string;
+      };
+      ticketScans: {
+        total_scans_last_minute: number;
+        active_turnstiles: number;
+        average_scans_per_turnstile: number;
+        status: string;
+      };
+    }>(`/api/v1/events/${eventId}/integrations`),
 };
