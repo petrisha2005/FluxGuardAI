@@ -156,6 +156,29 @@ export function setupFetchMocks() {
     });
   });
 
+  class MockWebSocket {
+    url: string;
+    onopen: (() => void) | null = null;
+    onclose: (() => void) | null = null;
+    onmessage: ((event: { data: string }) => void) | null = null;
+    onerror: ((err: any) => void) | null = null;
+
+    constructor(url: string) {
+      this.url = url;
+      setTimeout(() => {
+        if (this.onopen) this.onopen();
+      }, 0);
+    }
+
+    send(data: string) {}
+    close() {
+      setTimeout(() => {
+        if (this.onclose) this.onclose();
+      }, 0);
+    }
+  }
+
   global.fetch = fetchMock as any;
+  (global as any).WebSocket = MockWebSocket;
   return fetchMock;
 }

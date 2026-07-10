@@ -117,4 +117,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ zoneId, rating, comment }),
     }),
+
+  getWebSocketUrl: (eventId: string): string => {
+    const baseUrl = config.apiBaseUrl;
+    const wsProto = baseUrl.startsWith('https:') ? 'wss:' : 'ws:';
+    const host = baseUrl.replace(/^https?:\/\//, '');
+    return `${wsProto}//${host}/ws/events/${eventId}`;
+  },
 };
