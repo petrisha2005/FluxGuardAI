@@ -146,4 +146,13 @@ export const api = {
         status: string;
       };
     }>(`/api/v1/events/${eventId}/integrations`),
+
+  submitCopilotMessage: (eventId: string, message: string) =>
+    request<{
+      response: string;
+      suggested_actions: string[];
+    }>(`/api/v1/events/${eventId}/copilot/chat`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    }),
 };

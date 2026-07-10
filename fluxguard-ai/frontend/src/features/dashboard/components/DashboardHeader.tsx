@@ -130,7 +130,9 @@ export function DashboardHeader() {
             🎫
           </div>
           <div className="space-y-0.5">
-            <span className="block text-3xs font-semibold uppercase text-ink-subdued">Turnstiles</span>
+            <span className="block text-3xs font-semibold uppercase text-ink-subdued">
+              Turnstiles
+            </span>
             <span className="block text-xs font-bold text-ink">
               {integrations?.ticketScans.total_scans_last_minute || 0} scans/min
             </span>

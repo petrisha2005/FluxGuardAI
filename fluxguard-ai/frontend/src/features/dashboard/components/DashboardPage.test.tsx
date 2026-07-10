@@ -16,7 +16,7 @@ describe('DashboardPage', () => {
     render(<DashboardPage />);
 
     expect(screen.getByRole('heading', { name: /operations command center/i })).toBeInTheDocument();
-    expect(screen.getByText(/simulated operations/i)).toBeInTheDocument();
+    expect(screen.getByText(/enriched operations/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/risk overview metrics/i)).toBeInTheDocument();
     expect(
       await screen.findByRole('region', { name: /^prediction timeline$/i }),

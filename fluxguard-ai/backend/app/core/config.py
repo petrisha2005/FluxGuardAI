@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     jwt_secret: str | None = Field(default=None, alias="JWT_SECRET")
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     jwt_audience: str | None = Field(default=None, alias="JWT_AUDIENCE")
+    gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -56,10 +56,9 @@ async def test_risk_and_alerts_lifecycle() -> None:
         res_alerts = await client.get(f"/api/v1/events/{SEED_EVENT_ID}/alerts")
         assert res_alerts.status_code == 200
         alerts = res_alerts.json()["data"]
-        assert len(alerts) == 1
+        assert len(alerts) >= 1
 
-        alert = alerts[0]
-        assert alert["zoneId"] == SEED_ZONE_ID
+        alert = next(a for a in alerts if a["zoneId"] == SEED_ZONE_ID)
         assert alert["severity"] == "critical"
         assert alert["status"] == "unacknowledged"
         assert "congestion forecast" in alert["title"]

@@ -12,6 +12,7 @@ import type {
 } from '@/features/simulation/simulationTypes';
 import { CrowdZonePanel } from './components/CrowdZonePanel';
 import { DashboardHeader } from './components/DashboardHeader';
+import { CopilotPanel } from './components/CopilotPanel';
 import { FeedbackPanel } from './components/FeedbackPanel';
 import { GuidancePanel } from './components/GuidancePanel';
 import { LiveEventFeed } from './components/LiveEventFeed';
@@ -193,15 +194,18 @@ export function DashboardPage() {
       <RiskOverview summary={dashboardState.summary} />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
         <CrowdZonePanel zones={dashboardState.zones} />
-        <GuidancePanel guidance={dashboardState.guidance} />
+        <div className="space-y-6">
+          <GuidancePanel guidance={dashboardState.guidance} />
+          <FeedbackPanel />
+        </div>
       </div>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
         <Suspense fallback={<PredictionTimelineFallback />}>
           <PredictionTimeline predictions={dashboardState.predictions} />
         </Suspense>
         <div className="space-y-6">
+          <CopilotPanel />
           <LiveEventFeed items={dashboardState.events} />
-          <FeedbackPanel />
         </div>
       </div>
     </div>
