@@ -61,6 +61,8 @@ _measurements = []
 _predictions = []
 _risk_scores = {}
 _alerts = {}
+_guidance = []
+_feedback = []
 
 
 def get_all_events() -> list[dict]:
@@ -109,9 +111,7 @@ def get_predictions(
     since: datetime | None = None,
 ) -> list[dict]:
     with _lock:
-        # Resolve zones belonging to event
         event_zone_ids = {z["id"] for z in _zones.values() if z["event_id"] == event_id}
-
         results = [p for p in _predictions if p["zone_id"] in event_zone_ids]
 
         if zone_id:
@@ -181,6 +181,31 @@ def get_alerts(
         return results
 
 
+# Guidance Table Helpers
+def add_guidance(guidance_record: dict) -> None:
+    with _lock:
+        _guidance.append(guidance_record)
+
+
+def get_guidance_for_alert(alert_id: UUID, audience_role: str) -> dict | None:
+    with _lock:
+        for g in _guidance:
+            if g["alert_id"] == alert_id and g["audience_role"] == audience_role:
+                return g
+        return None
+
+
+# Feedback Table Helpers
+def add_feedback(feedback_record: dict) -> None:
+    with _lock:
+        _feedback.append(feedback_record)
+
+
+def get_all_feedback() -> list[dict]:
+    with _lock:
+        return list(_feedback)
+
+
 def clear_database() -> None:
     """Utility to reset dynamic database state in tests."""
     with _lock:
@@ -188,3 +213,5 @@ def clear_database() -> None:
         _predictions.clear()
         _risk_scores.clear()
         _alerts.clear()
+        _guidance.clear()
+        _feedback.clear()
