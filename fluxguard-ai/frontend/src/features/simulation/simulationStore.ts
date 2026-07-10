@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useSyncExternalStore } from 'react';
 
+import { api } from '../../services/api';
 import {
   createInitialCrowdZones,
   getSimulationTimestamp,
@@ -16,12 +18,27 @@ import type {
 
 type Listener = () => void;
 
+const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
 const MAX_EVENTS = 12;
 const RISK_ORDER: Record<RiskLevel, number> = {
   LOW: 0,
   MEDIUM: 1,
   HIGH: 2,
   CRITICAL: 3,
+};
+
+const ZONE_MAP: Record<string, string> = {
+  'north-gate': '00000000-0000-0000-0000-000000000001',
+  'east-concourse': '00000000-0000-0000-0000-000000000002',
+  'gate-c': '00000000-0000-0000-0000-000000000003',
+  'west-entrance': '00000000-0000-0000-0000-000000000004',
+};
+
+const REV_ZONE_MAP: Record<string, string> = {
+  '00000000-0000-0000-0000-000000000001': 'north-gate',
+  '00000000-0000-0000-0000-000000000002': 'east-concourse',
+  '00000000-0000-0000-0000-000000000003': 'gate-c',
+  '00000000-0000-0000-0000-000000000004': 'west-entrance',
 };
 
 function formatTimestamp(timestamp: string): string {
@@ -139,11 +156,13 @@ export function subscribe(listener: Listener): () => void {
 export function updateSimulation(): SimulationState {
   const nextTick = currentState.tick + 1;
   const timestamp = getSimulationTimestamp(nextTick);
-  const nextZones = simulateNextCrowdZones(currentState.zones, nextTick);
-  const nextAssessments = assessCrowdRisks(nextZones, timestamp);
+  const nextLocalZones = simulateNextCrowdZones(currentState.zones, nextTick);
+
+  // 1. Calculate and apply next state synchronously (preserves Vitest sync expectations)
+  const nextAssessments = assessCrowdRisks(nextLocalZones, timestamp);
   const nextEvents = createEvents(
     currentState.zones,
-    nextZones,
+    nextLocalZones,
     currentState.riskAssessments,
     nextAssessments,
     nextTick,
@@ -151,7 +170,7 @@ export function updateSimulation(): SimulationState {
   );
 
   currentState = {
-    zones: nextZones,
+    zones: nextLocalZones,
     riskAssessments: nextAssessments,
     events: [...nextEvents, ...currentState.events].slice(0, MAX_EVENTS),
     tick: nextTick,
@@ -159,6 +178,124 @@ export function updateSimulation(): SimulationState {
   };
 
   emitChange();
+
+  // 2. Perform REST API updates and state synchronization asynchronously in the background
+  Promise.resolve().then(async () => {
+    try {
+      await Promise.all(
+        nextLocalZones.map((zone) => {
+          const zoneUuid = ZONE_MAP[zone.id];
+          if (!zoneUuid) return Promise.resolve();
+          return api.postMeasurement(EVENT_ID, {
+            zoneId: zoneUuid,
+            measuredAt: timestamp,
+            densityCount: zone.density,
+            flowRatePerMinute: zone.entryRate,
+            queueLength: zone.queueLength,
+            sourceType: 'simulator',
+            confidence: 0.95,
+          });
+        }),
+      );
+
+      await api.runPredictionsCycle(EVENT_ID);
+
+      const [backendScores, backendAlerts] = await Promise.all([
+        api.fetchRiskScores(EVENT_ID),
+        api.fetchAlerts(EVENT_ID),
+      ]);
+
+      let worstAlertGuidance: any = null;
+      const activeBackendAlerts = backendAlerts.filter((a) => a.status === 'unacknowledged');
+      if (activeBackendAlerts.length > 0) {
+        const sortedAlerts = [...activeBackendAlerts].sort((a, b) => {
+          const aSev = a.severity === 'critical' ? 2 : a.severity === 'high' ? 1 : 0;
+          const bSev = b.severity === 'critical' ? 2 : b.severity === 'high' ? 1 : 0;
+          return bSev - aSev;
+        });
+        const targetAlert = sortedAlerts[0];
+        if (targetAlert.severity === 'critical' || targetAlert.severity === 'high') {
+          try {
+            worstAlertGuidance = await api.generateGuidance(EVENT_ID, targetAlert.id, 'operator');
+          } catch (e) {
+            console.warn('AI Guidance generation failed:', e);
+          }
+        }
+      }
+
+      const zones = nextLocalZones.map((zone) => {
+        const zoneUuid = ZONE_MAP[zone.id];
+        const score = backendScores.find((s) => s.zoneId === zoneUuid);
+        const risk = (score?.severity.toUpperCase() || 'LOW') as RiskLevel;
+        return {
+          ...zone,
+          risk,
+          lastUpdated: score?.generatedAt || timestamp,
+        };
+      });
+
+      const riskAssessments = backendScores.map((score) => {
+        const zoneId = REV_ZONE_MAP[score.zoneId] || 'north-gate';
+        const risk = score.severity.toUpperCase() as RiskLevel;
+
+        let reason = score.drivers.join(', ');
+        let recommendation = 'Maintain normal monitoring.';
+
+        if (
+          worstAlertGuidance &&
+          worstAlertGuidance.severity.toUpperCase() === risk &&
+          worstAlertGuidance.payload.affectedZones?.some(
+            (zUuid: string) => REV_ZONE_MAP[zUuid] === zoneId,
+          )
+        ) {
+          reason = worstAlertGuidance.payload.incidentSummary;
+          recommendation = worstAlertGuidance.payload.recommendedActions[0];
+        } else {
+          if (risk === 'CRITICAL') {
+            recommendation = 'Hold incoming flow and redirect visitors away.';
+          } else if (risk === 'HIGH') {
+            recommendation = 'Redirect incoming visitors to lower-density zones.';
+          } else if (risk === 'MEDIUM') {
+            recommendation = 'Monitor closely and prepare volunteer support.';
+          }
+        }
+
+        return {
+          zoneId,
+          risk,
+          reason,
+          recommendation,
+          timestamp: score.generatedAt,
+        };
+      });
+
+      const events = backendAlerts.map((alert) => {
+        const zoneId = REV_ZONE_MAP[alert.zoneId] || 'north-gate';
+        const severity = alert.severity.toUpperCase() as RiskLevel;
+        return {
+          id: alert.id,
+          zoneId,
+          severity,
+          title: alert.title,
+          description: alert.description,
+          timestamp: formatTimestamp(alert.timestamp),
+        };
+      });
+
+      currentState = {
+        zones,
+        riskAssessments,
+        events: [...events, ...currentState.events].slice(0, MAX_EVENTS),
+        tick: nextTick,
+        lastUpdated: timestamp,
+      };
+
+      emitChange();
+    } catch (e) {
+      console.warn('Backend sync failed, maintaining local fallback state:', e);
+    }
+  });
+
   return currentState;
 }
 

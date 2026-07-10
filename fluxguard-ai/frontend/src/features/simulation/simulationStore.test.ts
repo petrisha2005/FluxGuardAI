@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getState, resetSimulation, subscribe, updateSimulation } from './simulationStore';
+import { setupFetchMocks } from '@/tests/testMocks';
 
 describe('simulationStore', () => {
+  beforeEach(() => {
+    setupFetchMocks();
+  });
+
   it('updates simulation state and notifies subscribers', () => {
     resetSimulation();
     let notificationCount = 0;

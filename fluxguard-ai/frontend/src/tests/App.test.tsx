@@ -3,8 +3,13 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
 import { App } from '@/App';
+import { setupFetchMocks } from './testMocks';
 
 describe('App', () => {
+  beforeEach(() => {
+    setupFetchMocks();
+  });
+
   it('renders the application shell', () => {
     render(
       <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>

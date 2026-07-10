@@ -3,10 +3,12 @@ import { act } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { resetSimulation, updateSimulation } from '@/features/simulation/simulationStore';
+import { setupFetchMocks } from '@/tests/testMocks';
 import { DashboardPage } from '../DashboardPage';
 
 describe('DashboardPage', () => {
   beforeEach(() => {
+    setupFetchMocks();
     resetSimulation();
   });
 
