@@ -12,6 +12,7 @@ import type {
 } from '@/features/simulation/simulationTypes';
 import { CrowdZonePanel } from './components/CrowdZonePanel';
 import { DashboardHeader } from './components/DashboardHeader';
+import { FeedbackPanel } from './components/FeedbackPanel';
 import { GuidancePanel } from './components/GuidancePanel';
 import { LiveEventFeed } from './components/LiveEventFeed';
 import { RiskOverview } from './components/RiskOverview';
@@ -198,7 +199,10 @@ export function DashboardPage() {
         <Suspense fallback={<PredictionTimelineFallback />}>
           <PredictionTimeline predictions={dashboardState.predictions} />
         </Suspense>
-        <LiveEventFeed items={dashboardState.events} />
+        <div className="space-y-6">
+          <LiveEventFeed items={dashboardState.events} />
+          <FeedbackPanel />
+        </div>
       </div>
     </div>
   );
