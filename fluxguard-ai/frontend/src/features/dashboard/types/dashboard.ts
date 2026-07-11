@@ -28,6 +28,7 @@ export interface GuidanceRecommendation {
   recommendedActions: string[];
   confidence: number;
   risk: RiskLevel;
+  status?: string;
 }
 
 export interface EventFeedItem {

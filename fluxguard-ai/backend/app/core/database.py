@@ -119,6 +119,9 @@ async def _seed_database_if_empty() -> None:
             with open(schema_path) as f:  # noqa: ASYNC230
                 schema_sql = f.read()
             await conn.execute(schema_sql)
+            await conn.execute(
+                "ALTER TABLE guidance_messages ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'PENDING_APPROVAL'"
+            )
 
         count = await conn.fetchval("SELECT COUNT(*) FROM venues")
         if count == 0:
@@ -711,10 +714,10 @@ async def _add_guidance(g: dict) -> None:
             """
             INSERT INTO guidance_messages (
                 id, alert_id, audience_role, severity, headline, actions_json, expires_at, payload_json,
-                prompt_version, schema_version, model_provider, model_name, input_context_hash
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                prompt_version, schema_version, model_provider, model_name, input_context_hash, status
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             """,
-            g["id"],
+            g.get("id", g.get("guidance_id")),
             g["alert_id"],
             g["audience_role"],
             g["severity"],
@@ -727,6 +730,7 @@ async def _add_guidance(g: dict) -> None:
             g["model_provider"],
             g["model_name"],
             g["input_context_hash"],
+            g.get("status", "PENDING_APPROVAL"),
         )
 
 
@@ -750,7 +754,7 @@ async def _get_guidance_for_alert(alert_id: UUID, audience_role: str) -> dict | 
         row = await conn.fetchrow(
             """
             SELECT id, alert_id, audience_role, severity, headline, actions_json, expires_at, payload_json,
-                   prompt_version, schema_version, model_provider, model_name, input_context_hash
+                   prompt_version, schema_version, model_provider, model_name, input_context_hash, status
             FROM guidance_messages
             WHERE alert_id = $1 AND audience_role = $2
             """,
@@ -759,6 +763,7 @@ async def _get_guidance_for_alert(alert_id: UUID, audience_role: str) -> dict | 
         )
         if row:
             d = dict(row)
+            d["guidance_id"] = d.pop("id")
             d["actions"] = json.loads(d.pop("actions_json"))
             d["payload"] = json.loads(d.pop("payload_json"))
             return d
@@ -775,6 +780,85 @@ def get_guidance_for_alert(alert_id: UUID, audience_role: str) -> dict | None:
     with _lock:
         for g in _guidance:
             if g["alert_id"] == alert_id and g["audience_role"] == audience_role:
+                return g
+        return None
+
+
+async def _get_guidance_by_id(guidance_id: UUID) -> dict | None:
+    pool = get_db_pool()
+    if not pool:
+        return None
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, alert_id, audience_role, severity, headline, actions_json, expires_at, payload_json,
+                   prompt_version, schema_version, model_provider, model_name, input_context_hash, status
+            FROM guidance_messages
+            WHERE id = $1
+            """,
+            guidance_id,
+        )
+        if row:
+            d = dict(row)
+            d["guidance_id"] = d.pop("id")
+            d["actions"] = json.loads(d.pop("actions_json"))
+            d["payload"] = json.loads(d.pop("payload_json"))
+            return d
+        return None
+
+
+def get_guidance_by_id(guidance_id: UUID) -> dict | None:
+    pool = get_db_pool()
+    if pool:
+        try:
+            return run_async(_get_guidance_by_id(guidance_id))
+        except Exception as e:
+            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
+    with _lock:
+        for g in _guidance:
+            g_id = g.get("id", g.get("guidance_id"))
+            if g_id == guidance_id:
+                return g
+        return None
+
+
+async def _update_guidance_status(guidance_id: UUID, status: str) -> dict | None:
+    pool = get_db_pool()
+    if not pool:
+        return None
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE guidance_messages
+            SET status = $2
+            WHERE id = $1
+            RETURNING id, alert_id, audience_role, severity, headline, actions_json, expires_at, payload_json,
+                      prompt_version, schema_version, model_provider, model_name, input_context_hash, status
+            """,
+            guidance_id,
+            status,
+        )
+        if row:
+            d = dict(row)
+            d["guidance_id"] = d.pop("id")
+            d["actions"] = json.loads(d.pop("actions_json"))
+            d["payload"] = json.loads(d.pop("payload_json"))
+            return d
+        return None
+
+
+def update_guidance_status(guidance_id: UUID, status: str) -> dict | None:
+    pool = get_db_pool()
+    if pool:
+        try:
+            return run_async(_update_guidance_status(guidance_id, status))
+        except Exception as e:
+            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
+    with _lock:
+        for g in _guidance:
+            g_id = g.get("id", g.get("guidance_id"))
+            if g_id == guidance_id:
+                g["status"] = status
                 return g
         return None
 

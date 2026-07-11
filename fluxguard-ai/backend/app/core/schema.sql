@@ -97,7 +97,8 @@ CREATE TABLE IF NOT EXISTS guidance_messages (
     schema_version TEXT NOT NULL,
     model_provider TEXT NOT NULL,
     model_name TEXT NOT NULL,
-    input_context_hash TEXT NOT NULL
+    input_context_hash TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING_APPROVAL'
 );
 
 -- 9. Feedback Table

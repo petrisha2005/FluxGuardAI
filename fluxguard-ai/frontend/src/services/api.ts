@@ -156,4 +156,20 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ message }),
     }),
+
+  approveGuidance: (eventId: string, guidanceId: string) =>
+    request<{
+      guidanceId: string;
+      status: string;
+    }>(`/api/v1/events/${eventId}/guidance/${guidanceId}/approve`, {
+      method: 'POST',
+    }),
+
+  rejectGuidance: (eventId: string, guidanceId: string) =>
+    request<{
+      guidanceId: string;
+      status: string;
+    }>(`/api/v1/events/${eventId}/guidance/${guidanceId}/reject`, {
+      method: 'POST',
+    }),
 };

@@ -71,3 +71,79 @@ async def generate_guidance(eventId: UUID, payload: GuidanceGenerateRequest):
     )
 
     return StandardResponse(data=response_obj)
+
+
+@router.post("/{guidanceId}/approve", response_model=StandardResponse)
+async def approve_guidance(eventId: UUID, guidanceId: UUID):
+    """Approve a pending safety directive for active broadcast."""
+    guidance_record = database.get_guidance_by_id(guidanceId)
+    if not guidance_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": {
+                    "code": "GUIDANCE_NOT_FOUND",
+                    "message": f"Guidance message with ID {guidanceId} not found.",
+                }
+            },
+        )
+
+    updated = database.update_guidance_status(guidanceId, "APPROVED")
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": {
+                    "code": "UPDATE_FAILED",
+                    "message": "Failed to update guidance approval status.",
+                }
+            },
+        )
+
+    response_obj = GuidanceResponse(**updated)
+
+    await manager.broadcast_to_event(
+        str(eventId),
+        "guidance_approved",
+        response_obj.model_dump(by_alias=True, mode="json"),
+    )
+
+    return StandardResponse(data=response_obj)
+
+
+@router.post("/{guidanceId}/reject", response_model=StandardResponse)
+async def reject_guidance(eventId: UUID, guidanceId: UUID):
+    """Reject and archive a safety directive."""
+    guidance_record = database.get_guidance_by_id(guidanceId)
+    if not guidance_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": {
+                    "code": "GUIDANCE_NOT_FOUND",
+                    "message": f"Guidance message with ID {guidanceId} not found.",
+                }
+            },
+        )
+
+    updated = database.update_guidance_status(guidanceId, "REJECTED")
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": {
+                    "code": "UPDATE_FAILED",
+                    "message": "Failed to update guidance status.",
+                }
+            },
+        )
+
+    response_obj = GuidanceResponse(**updated)
+
+    await manager.broadcast_to_event(
+        str(eventId),
+        "guidance_rejected",
+        response_obj.model_dump(by_alias=True, mode="json"),
+    )
+
+    return StandardResponse(data=response_obj)

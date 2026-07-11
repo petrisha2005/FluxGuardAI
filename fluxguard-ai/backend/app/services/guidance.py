@@ -73,6 +73,7 @@ def get_deterministic_fallback(alert: dict, audience_role: str, zone_name: str) 
         "model_provider": "system",
         "model_name": "deterministic-template",
         "input_context_hash": "fallback",
+        "status": "PENDING_APPROVAL",
     }
 
 
@@ -187,6 +188,7 @@ def generate_guidance_for_alert(
         "model_provider": "anthropic",
         "model_name": "claude-3-5-sonnet",
         "input_context_hash": context_hash,
+        "status": "PENDING_APPROVAL",
     }
 
     database.add_guidance(record)

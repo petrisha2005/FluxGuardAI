@@ -94,3 +94,4 @@ class GuidanceResponse(BaseModel):
     model_provider: str
     model_name: str
     input_context_hash: str
+    status: str = "PENDING_APPROVAL"

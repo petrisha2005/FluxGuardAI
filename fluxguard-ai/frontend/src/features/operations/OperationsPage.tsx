@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { DashboardHeader } from '../dashboard/components/DashboardHeader';
 import { GuidancePanel } from '../dashboard/components/GuidancePanel';
 import { LiveEventFeed } from '../dashboard/components/LiveEventFeed';
@@ -14,6 +15,9 @@ import type {
   GuidanceRecommendation,
   EventFeedItem,
 } from '../dashboard/types/dashboard';
+import { api } from '@/services/api';
+
+const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
 
 const riskToSeverity: Record<RiskLevel, AlertSeverity> = {
   LOW: 'info',
@@ -71,8 +75,36 @@ function toEventFeedItems(events: SimulationEvent[]): EventFeedItem[] {
 
 export function OperationsPage() {
   const state = useSimulationState();
-  const guidance = getGuidance(state.riskAssessments, state.zones, state.tick);
+  const rawGuidance = getGuidance(state.riskAssessments, state.zones, state.tick);
   const events = toEventFeedItems(state.events);
+
+  const [approvedStatus, setApprovedStatus] = useState<Record<string, string>>({});
+
+  const guidanceId = rawGuidance.id;
+  const currentStatus = approvedStatus[guidanceId] || 'PENDING_APPROVAL';
+
+  const guidance = {
+    ...rawGuidance,
+    status: currentStatus,
+  };
+
+  const handleApprove = async () => {
+    try {
+      await api.approveGuidance(EVENT_ID, guidanceId);
+      setApprovedStatus((prev) => ({ ...prev, [guidanceId]: 'APPROVED' }));
+    } catch (err) {
+      console.error('Failed to approve safety guidance message', err);
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      await api.rejectGuidance(EVENT_ID, guidanceId);
+      setApprovedStatus((prev) => ({ ...prev, [guidanceId]: 'REJECTED' }));
+    } catch (err) {
+      console.error('Failed to reject/archive safety guidance message', err);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -86,7 +118,7 @@ export function OperationsPage() {
 
         {/* Right Column: Directives actions & Reports feedback forms */}
         <div className="space-y-6">
-          <GuidancePanel guidance={guidance} />
+          <GuidancePanel guidance={guidance} onApprove={handleApprove} onReject={handleReject} />
           <FeedbackPanel />
         </div>
       </div>
