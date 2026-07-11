@@ -39,7 +39,7 @@ def generate_offline_response(query: str, zones: list[dict], alerts: list[dict])
             zone_alerts = [a for a in alerts if a["zone_id"] == match_zone["id"]]
             alert_desc = ""
             if zone_alerts:
-                alert_desc = f" Active alert details: {zone_alerts[0]['reason']}."
+                alert_desc = f" Active alert details: {zone_alerts[0].get('description', zone_alerts[0].get('title', ''))}."
 
             response = (
                 f"Crowd density at {name} has reached {density}%, causing elevated queue congestion ({queue} visitors). "
@@ -154,7 +154,10 @@ async def resolve_copilot_query(event_id: UUID, query: str) -> dict:
                 ]
             )
             alerts_text = "\n".join(
-                [f"- Alert: {a['reason']} in {a['zone_id'].hex} (Severity: {a['severity']})" for a in alerts]
+                [
+                    f"- Alert: {a.get('description', a.get('title', ''))} in {a['zone_id'].hex} (Severity: {a['severity']})"
+                    for a in alerts
+                ]
             )
 
             prompt = (
