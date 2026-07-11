@@ -116,4 +116,37 @@ def evaluate_and_score_risks(event_id: UUID, predictions: list[dict]) -> list[di
                 }
                 database.add_alert(alert_record)
 
+        # Surge anomaly detection
+        zone_measurements = [m for m in database.get_all_measurements() if m["zone_id"] == zone_id]
+        if len(zone_measurements) >= 2:
+            zone_measurements.sort(key=lambda m: m["measured_at"])
+            latest_m = zone_measurements[-1]
+            prev_m = zone_measurements[-2]
+
+            capacity = zone.get("capacity", 2000)
+            latest_pct = (latest_m["density_count"] / capacity) * 100
+            prev_pct = (prev_m["density_count"] / capacity) * 100
+
+            if (latest_pct - prev_pct) >= 20.0:
+                existing_alerts = database.get_alerts(event_id=event_id, zone_id=zone_id)
+                active_anomalies = [
+                    a
+                    for a in existing_alerts
+                    if a["title"].startswith("Sudden crowd surge anomaly")
+                    and a["status"] in {"unacknowledged", "acknowledged"}
+                ]
+                if not active_anomalies:
+                    alert_record = {
+                        "id": uuid4(),
+                        "zone_id": zone_id,
+                        "severity": "critical",
+                        "status": "unacknowledged",
+                        "title": f"Sudden crowd surge anomaly in {zone['name']}",
+                        "description": f"Crowd density spiked by {int(latest_pct - prev_pct)}% in the last interval. Egress channels under high pressure.",
+                        "timestamp": generated_at,
+                        "assignee": None,
+                        "notes": None,
+                    }
+                    database.add_alert(alert_record)
+
     return updated_scores

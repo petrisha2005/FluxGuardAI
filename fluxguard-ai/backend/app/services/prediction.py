@@ -95,7 +95,8 @@ def run_prediction_cycle(event_id: UUID) -> list[dict]:
         zone_measurements = [m for m in measurements if m["zone_id"] == zone_id]
         if zone_measurements:
             latest = max(zone_measurements, key=lambda m: m["measured_at"])
-            density = latest["density_count"]
+            capacity = zone.get("capacity", 2000)
+            density = min(100, max(0, int((latest["density_count"] / capacity) * 100)))
             queue = latest["queue_length"]
             flow = latest["flow_rate_per_minute"]
         else:
