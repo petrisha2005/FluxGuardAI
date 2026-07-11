@@ -199,14 +199,12 @@ export function DashboardPage() {
           <FeedbackPanel />
         </div>
       </div>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_360px_360px]">
         <Suspense fallback={<PredictionTimelineFallback />}>
           <PredictionTimeline predictions={dashboardState.predictions} />
         </Suspense>
-        <div className="space-y-6">
-          <CopilotPanel />
-          <LiveEventFeed items={dashboardState.events} />
-        </div>
+        <CopilotPanel />
+        <LiveEventFeed items={dashboardState.events} />
       </div>
     </div>
   );

@@ -30,10 +30,12 @@ export function CopilotPanel() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -82,9 +84,10 @@ export function CopilotPanel() {
       aria-label="AI Copilot Chat Assistant"
       className="flex flex-col h-[520px]"
     >
-      <div className="flex flex-col h-full justify-between">
+      <div className="flex-1 min-h-0 flex flex-col justify-between">
         {/* Messages list container */}
         <div
+          ref={messagesContainerRef}
           className="flex-1 overflow-y-auto space-y-4 pr-1 mb-4 scrollbar-thin scrollbar-thumb-white/10"
           role="log"
           aria-live="polite"
@@ -149,7 +152,6 @@ export function CopilotPanel() {
               </motion.div>
             )}
           </AnimatePresence>
-          <div ref={messagesEndRef} />
         </div>
 
         {/* Dynamic suggestion chips */}
