@@ -16,7 +16,57 @@ export function Navigation() {
         <NavLink to="/" className="text-lg font-semibold tracking-tight text-ink">
           FluxGuard AI
         </NavLink>
-        <span className="text-sm font-medium text-ink-muted">Predict. Prevent. Protect.</span>
+        <div className="flex items-center gap-6">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
+                isActive
+                  ? 'text-brand-primary border-b-2 border-brand-primary pb-0.5 shadow-[0_4px_12px_rgb(56_189_248/0.1)]'
+                  : 'text-ink-muted'
+              }`
+            }
+          >
+            Dashboard
+          </NavLink>
+          <NavLink
+            to="/analytics"
+            className={({ isActive }) =>
+              `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
+                isActive
+                  ? 'text-brand-primary border-b-2 border-brand-primary pb-0.5 shadow-[0_4px_12px_rgb(56_189_248/0.1)]'
+                  : 'text-ink-muted'
+              }`
+            }
+          >
+            Analytics
+          </NavLink>
+          <NavLink
+            to="/copilot"
+            className={({ isActive }) =>
+              `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
+                isActive
+                  ? 'text-brand-primary border-b-2 border-brand-primary pb-0.5 shadow-[0_4px_12px_rgb(56_189_248/0.1)]'
+                  : 'text-ink-muted'
+              }`
+            }
+          >
+            AI Copilot
+          </NavLink>
+          <NavLink
+            to="/operations"
+            className={({ isActive }) =>
+              `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
+                isActive
+                  ? 'text-brand-primary border-b-2 border-brand-primary pb-0.5 shadow-[0_4px_12px_rgb(56_189_248/0.1)]'
+                  : 'text-ink-muted'
+              }`
+            }
+          >
+            Operations
+          </NavLink>
+        </div>
       </nav>
     </header>
   );

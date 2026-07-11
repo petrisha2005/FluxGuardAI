@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Panel } from '@/components/ui';
 import { api } from '@/services/api';
 
+import { cn } from '@/utils/classNames';
+
 const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
 
 interface ChatMessage {
@@ -20,7 +22,7 @@ const SUGGESTIONS = [
   { label: 'Summarize last 10 minutes', query: 'Summarize the last 10 minutes.' },
 ];
 
-export function CopilotPanel() {
+export function CopilotPanel({ className }: { className?: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'init-msg',
@@ -82,7 +84,7 @@ export function CopilotPanel() {
       eyebrow="Decision Support"
       title="FluxGuard AI Copilot"
       aria-label="AI Copilot Chat Assistant"
-      className="flex flex-col h-[520px]"
+      className={cn('flex flex-col h-[520px]', className)}
     >
       <div className="flex-1 min-h-0 flex flex-col justify-between">
         {/* Messages list container */}

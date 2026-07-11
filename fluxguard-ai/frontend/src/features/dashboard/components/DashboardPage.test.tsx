@@ -18,9 +18,6 @@ describe('DashboardPage', () => {
     expect(screen.getByRole('heading', { name: /operations command center/i })).toBeInTheDocument();
     expect(screen.getByText(/enriched operations/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/risk overview metrics/i)).toBeInTheDocument();
-    expect(
-      await screen.findByRole('region', { name: /^prediction timeline$/i }),
-    ).toBeInTheDocument();
   });
 
   it('displays all configured stadium zones and density values', () => {
@@ -48,17 +45,6 @@ describe('DashboardPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders simulated guidance and live event feed sections', () => {
-    render(<DashboardPage />);
-
-    expect(screen.getByLabelText(/guidance panel/i)).toBeInTheDocument();
-    expect(screen.getByText(/confidence/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/live event feed/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole('article', { name: /Gate C forecast pressure detected/i }),
-    ).toBeInTheDocument();
-  });
-
   it('updates dashboard values when the simulation advances', () => {
     render(<DashboardPage />);
 
@@ -69,6 +55,5 @@ describe('DashboardPage', () => {
     });
 
     expect(screen.queryByLabelText(/Peak Density: 86%/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('article', { name: /Recommended action/i })).toBeInTheDocument();
   });
 });

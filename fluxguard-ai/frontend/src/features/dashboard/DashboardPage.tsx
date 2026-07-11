@@ -1,48 +1,11 @@
-import { lazy, Suspense, useEffect } from 'react';
-
-import { Panel, Skeleton } from '@/components/ui';
-import type { AlertSeverity, CrowdRiskState } from '@/components/ui';
-import { startSimulation, useSimulationState } from '@/features/simulation/simulationStore';
-import type {
-  CrowdZone,
-  RiskAssessment,
-  RiskLevel,
-  SimulationEvent,
-  SimulationState,
-} from '@/features/simulation/simulationTypes';
+import { useSimulationState } from '@/features/simulation/simulationStore';
+import type { CrowdZone, RiskLevel, SimulationState } from '@/features/simulation/simulationTypes';
 import { CrowdZonePanel } from './components/CrowdZonePanel';
 import { DashboardHeader } from './components/DashboardHeader';
-import { CopilotPanel } from './components/CopilotPanel';
-import { FeedbackPanel } from './components/FeedbackPanel';
-import { GuidancePanel } from './components/GuidancePanel';
-import { LiveEventFeed } from './components/LiveEventFeed';
 import { RiskOverview } from './components/RiskOverview';
-import type {
-  DashboardSummary,
-  EventFeedItem,
-  GuidanceRecommendation,
-  PredictionPoint,
-  StadiumZone,
-  ZoneTrend,
-} from './types/dashboard';
+import type { DashboardSummary, StadiumZone, ZoneTrend } from './types/dashboard';
 
-const PredictionTimeline = lazy(() =>
-  import('./components/PredictionTimeline').then((module) => ({
-    default: module.PredictionTimeline,
-  })),
-);
-
-function PredictionTimelineFallback() {
-  return (
-    <Panel
-      eyebrow="Predictive analytics"
-      title="Density forecast timeline"
-      aria-label="Prediction timeline loading"
-    >
-      <Skeleton label="Loading prediction timeline" className="h-72" />
-    </Panel>
-  );
-}
+import type { AlertSeverity, CrowdRiskState } from '@/components/ui';
 
 const riskToCrowdState: Record<RiskLevel, CrowdRiskState> = {
   LOW: 'green',
@@ -186,26 +149,11 @@ export function DashboardPage() {
   const simulationState = useSimulationState();
   const dashboardState = selectDashboardState(simulationState);
 
-  useEffect(() => startSimulation(), []);
-
   return (
     <div className="space-y-6">
       <DashboardHeader />
       <RiskOverview summary={dashboardState.summary} />
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
-        <CrowdZonePanel zones={dashboardState.zones} />
-        <div className="space-y-6">
-          <GuidancePanel guidance={dashboardState.guidance} />
-          <FeedbackPanel />
-        </div>
-      </div>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_360px_360px]">
-        <Suspense fallback={<PredictionTimelineFallback />}>
-          <PredictionTimeline predictions={dashboardState.predictions} />
-        </Suspense>
-        <CopilotPanel />
-        <LiveEventFeed items={dashboardState.events} />
-      </div>
+      <CrowdZonePanel zones={dashboardState.zones} />
     </div>
   );
 }
