@@ -172,4 +172,19 @@ export const api = {
     }>(`/api/v1/events/${eventId}/guidance/${guidanceId}/reject`, {
       method: 'POST',
     }),
+
+  getActiveGuidance: (eventId: string) =>
+    request<
+      {
+        guidanceId: string;
+        alertId: string;
+        audienceRole: string;
+        severity: string;
+        headline: string;
+        actions: string[];
+        expiresAt: string;
+        payload: any;
+        status: string;
+      }[]
+    >(`/api/v1/events/${eventId}/guidance/active`),
 };

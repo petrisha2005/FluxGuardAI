@@ -3,7 +3,7 @@ import json
 import logging
 import os
 import threading
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 import asyncpg
@@ -909,6 +909,58 @@ def get_all_feedback() -> list[dict]:
             logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
     with _lock:
         return list(_feedback)
+
+
+async def _get_active_approved_guidance(event_id: UUID) -> list[dict]:
+    pool = get_db_pool()
+    if not pool:
+        return []
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT gm.id, gm.alert_id, gm.audience_role, gm.severity, gm.headline, gm.actions_json, gm.expires_at, gm.payload_json,
+                   gm.prompt_version, gm.schema_version, gm.model_provider, gm.model_name, gm.input_context_hash, gm.status
+            FROM guidance_messages gm
+            JOIN alerts a ON gm.alert_id = a.id
+            JOIN zones z ON a.zone_id = z.id
+            WHERE z.event_id = $1 AND gm.status = 'APPROVED' AND gm.expires_at > $2
+            """,
+            event_id,
+            datetime.now(UTC),
+        )
+        results = []
+        for row in rows:
+            d = dict(row)
+            d["guidance_id"] = d.pop("id")
+            d["actions"] = json.loads(d.pop("actions_json"))
+            d["payload"] = json.loads(d.pop("payload_json"))
+            results.append(d)
+        return results
+
+
+def get_active_approved_guidance(event_id: UUID) -> list[dict]:
+    pool = get_db_pool()
+    if pool:
+        try:
+            return run_async(_get_active_approved_guidance(event_id))
+        except Exception as e:
+            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
+    with _lock:
+        now = datetime.now(UTC)
+        results = []
+        for g in _guidance:
+            alert = _alerts.get(g["alert_id"])
+            if not alert:
+                continue
+            zone = _zones.get(alert["zone_id"])
+            if not zone or zone["event_id"] != event_id:
+                continue
+            expires = g["expires_at"]
+            if expires.tzinfo is None:
+                expires = expires.replace(tzinfo=UTC)
+            if g.get("status") == "APPROVED" and expires > now:
+                results.append(g)
+        return results
 
 
 # DB Reset Utility

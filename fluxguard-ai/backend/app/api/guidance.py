@@ -147,3 +147,23 @@ async def reject_guidance(eventId: UUID, guidanceId: UUID):
     )
 
     return StandardResponse(data=response_obj)
+
+
+@router.get("/active", response_model=StandardResponse)
+async def get_active_approved_guidance(eventId: UUID):
+    """Retrieve all active approved safety directives for signage boards."""
+    event = database.get_event_by_id(eventId)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": {
+                    "code": "EVENT_NOT_FOUND",
+                    "message": f"Event with ID {eventId} not found.",
+                }
+            },
+        )
+
+    records = database.get_active_approved_guidance(eventId)
+    response_list = [GuidanceResponse(**r) for r in records]
+    return StandardResponse(data=response_list)

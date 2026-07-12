@@ -66,6 +66,18 @@ export function Navigation() {
           >
             Operations
           </NavLink>
+          <NavLink
+            to="/signage"
+            className={({ isActive }) =>
+              `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
+                isActive
+                  ? 'text-brand-primary border-b-2 border-brand-primary pb-0.5 shadow-[0_4px_12px_rgb(56_189_248/0.1)]'
+                  : 'text-ink-muted'
+              }`
+            }
+          >
+            Signage
+          </NavLink>
         </div>
       </nav>
     </header>
