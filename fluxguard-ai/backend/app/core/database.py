@@ -73,6 +73,12 @@ _risk_scores = {}
 _alerts = {}
 _guidance = []
 _feedback = []
+_zone_staffing = {
+    "00000000-0000-0000-0000-000000000001": 20,
+    "00000000-0000-0000-0000-000000000002": 15,
+    "00000000-0000-0000-0000-000000000003": 25,
+    "00000000-0000-0000-0000-000000000004": 10,
+}
 
 
 # Async bridge helper to run async queries in sync database context safely
@@ -988,3 +994,20 @@ def clear_database() -> None:
         _alerts.clear()
         _guidance.clear()
         _feedback.clear()
+        _zone_staffing.clear()
+        _zone_staffing.update({
+            "00000000-0000-0000-0000-000000000001": 20,
+            "00000000-0000-0000-0000-000000000002": 15,
+            "00000000-0000-0000-0000-000000000003": 25,
+            "00000000-0000-0000-0000-000000000004": 10,
+        })
+
+
+def get_zone_staffing(event_id: UUID) -> dict[str, int]:
+    with _lock:
+        return dict(_zone_staffing)
+
+
+def update_zone_staffing(event_id: UUID, zone_id: UUID, count: int) -> None:
+    with _lock:
+        _zone_staffing[str(zone_id)] = count

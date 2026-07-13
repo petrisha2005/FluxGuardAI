@@ -3,6 +3,7 @@ import { DashboardHeader } from '../dashboard/components/DashboardHeader';
 import { GuidancePanel } from '../dashboard/components/GuidancePanel';
 import { LiveEventFeed } from '../dashboard/components/LiveEventFeed';
 import { FeedbackPanel } from '../dashboard/components/FeedbackPanel';
+import { StaffingPanel } from './components/StaffingPanel';
 import { useSimulationState } from '@/features/simulation/simulationStore';
 import type {
   RiskAssessment,
@@ -119,6 +120,7 @@ export function OperationsPage() {
         {/* Right Column: Directives actions & Reports feedback forms */}
         <div className="space-y-6">
           <GuidancePanel guidance={guidance} onApprove={handleApprove} onReject={handleReject} />
+          <StaffingPanel />
           <FeedbackPanel />
         </div>
       </div>

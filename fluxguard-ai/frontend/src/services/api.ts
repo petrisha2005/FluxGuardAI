@@ -64,6 +64,19 @@ export interface BackendGuidance {
   payload: Record<string, any>;
 }
 
+export interface BackendStaffingSuggestion {
+  fromZoneId: string;
+  toZoneId: string;
+  count: number;
+  reason: string;
+}
+
+export interface BackendStaffingStatus {
+  currentStaff: Record<string, number>;
+  recommendedStaff: Record<string, number>;
+  suggestions: BackendStaffingSuggestion[];
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${config.apiBaseUrl}${path}`;
   const response = await fetch(url, {
@@ -187,4 +200,16 @@ export const api = {
         status: string;
       }[]
     >(`/api/v1/events/${eventId}/guidance/active`),
+
+  getStaffingStatus: (eventId: string) =>
+    request<BackendStaffingStatus>(`/api/v1/events/${eventId}/staffing`),
+
+  redeployStaff: (eventId: string, fromZoneId: string, toZoneId: string, count: number) =>
+    request<{
+      status: string;
+      currentStaff: Record<string, number>;
+    }>(`/api/v1/events/${eventId}/staffing/redeploy`, {
+      method: 'POST',
+      body: JSON.stringify({ fromZoneId, toZoneId, count }),
+    }),
 };

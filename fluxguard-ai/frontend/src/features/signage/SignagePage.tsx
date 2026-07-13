@@ -24,7 +24,7 @@ export function SignagePage() {
     const loadDirectives = async () => {
       try {
         const response = await api.getActiveGuidance('e0000000-0000-0000-0000-000000000000');
-        setApprovedDirectives(response.data);
+        setApprovedDirectives(response);
       } catch (err) {
         console.error('Failed to load active approved guidance', err);
       }
