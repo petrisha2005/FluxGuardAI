@@ -29,16 +29,22 @@ function getPredictionData(zones: CrowdZone[]): PredictionPoint[] {
       label: 'Current',
       density: averageDensity,
       forecast: averageDensity,
+      confidenceLow: averageDensity,
+      confidenceHigh: averageDensity,
     },
     {
       label: '20 min',
       density: averageDensity,
       forecast: projectedTwenty,
+      confidenceLow: Math.max(0, projectedTwenty - 8),
+      confidenceHigh: Math.min(100, projectedTwenty + 8),
     },
     {
       label: '40 min',
       density: averageDensity,
       forecast: projectedForty,
+      confidenceLow: Math.max(0, projectedForty - 14),
+      confidenceHigh: Math.min(100, projectedForty + 14),
     },
   ];
 }

@@ -25,6 +25,7 @@ describe('AnalyticsPage', () => {
     expect(screen.getByText(/weather metrics/i)).toBeInTheDocument();
     expect(screen.getByText(/transit pressure/i)).toBeInTheDocument();
     expect(screen.getByText(/ticket inflow/i)).toBeInTheDocument();
+    expect(screen.getByText(/Model Explanation & Drivers/i)).toBeInTheDocument();
   });
 });
 

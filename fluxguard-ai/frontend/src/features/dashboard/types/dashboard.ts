@@ -20,6 +20,8 @@ export interface PredictionPoint {
   label: 'Current' | '20 min' | '40 min';
   density: number;
   forecast: number;
+  confidenceLow?: number;
+  confidenceHigh?: number;
 }
 
 export interface GuidanceRecommendation {
