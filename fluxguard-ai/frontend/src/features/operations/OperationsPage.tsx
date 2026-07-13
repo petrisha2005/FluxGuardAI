@@ -12,11 +12,8 @@ import type {
   SimulationEvent,
   RiskLevel,
 } from '@/features/simulation/simulationTypes';
-import type {
-  AlertSeverity,
-  GuidanceRecommendation,
-  EventFeedItem,
-} from '../dashboard/types/dashboard';
+import type { GuidanceRecommendation, EventFeedItem } from '../dashboard/types/dashboard';
+import type { AlertSeverity } from '@/components/ui';
 import { api } from '@/services/api';
 
 const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
@@ -24,7 +21,7 @@ const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
 const riskToSeverity: Record<RiskLevel, AlertSeverity> = {
   LOW: 'info',
   MEDIUM: 'warning',
-  HIGH: 'error',
+  HIGH: 'warning',
   CRITICAL: 'critical',
 };
 

@@ -1,9 +1,22 @@
 import { useSimulationState } from '@/features/simulation/simulationStore';
-import type { CrowdZone, RiskLevel, SimulationState } from '@/features/simulation/simulationTypes';
+import type {
+  CrowdZone,
+  RiskLevel,
+  SimulationState,
+  RiskAssessment,
+  SimulationEvent,
+} from '@/features/simulation/simulationTypes';
 import { CrowdZonePanel } from './components/CrowdZonePanel';
 import { DashboardHeader } from './components/DashboardHeader';
 import { RiskOverview } from './components/RiskOverview';
-import type { DashboardSummary, StadiumZone, ZoneTrend } from './types/dashboard';
+import type {
+  DashboardSummary,
+  StadiumZone,
+  ZoneTrend,
+  PredictionPoint,
+  GuidanceRecommendation,
+  EventFeedItem,
+} from './types/dashboard';
 
 import type { AlertSeverity, CrowdRiskState } from '@/components/ui';
 
@@ -103,8 +116,18 @@ function getGuidance(
   zones: CrowdZone[],
   tick: number,
 ): GuidanceRecommendation {
+  if (assessments.length === 0) {
+    return {
+      id: `guidance-empty`,
+      message: 'Stadium operations are within safe parameters. No high risk hotspots detected.',
+      recommendedActions: ['Continue routine entry/exit monitoring.'],
+      confidence: 100,
+      risk: 'LOW',
+    };
+  }
+
   const highestAssessment = assessments.reduce((highest, assessment) =>
-    riskToSeverity[assessment.risk] === 'critical' ||
+    riskToSeverity[assessment.risk as RiskLevel] === 'critical' ||
     (assessment.risk === 'HIGH' && highest.risk !== 'CRITICAL') ||
     (assessment.risk === 'MEDIUM' && highest.risk === 'LOW')
       ? assessment
@@ -120,15 +143,18 @@ function getGuidance(
       zone ? `Balance entry and exit flow for ${zone.name}.` : 'Maintain active zone monitoring.',
       'Reassess zone posture on the next simulation interval.',
     ],
-    confidence: Math.min(96, 72 + tick + riskToSeverity[highestAssessment.risk].length),
-    risk: highestAssessment.risk,
+    confidence: Math.min(
+      96,
+      72 + tick + (riskToSeverity[highestAssessment.risk as RiskLevel] || 'info').length,
+    ),
+    risk: highestAssessment.risk as RiskLevel,
   };
 }
 
 function toEventFeedItems(events: SimulationEvent[]): EventFeedItem[] {
   return events.map((event) => ({
     id: event.id,
-    severity: riskToSeverity[event.severity],
+    severity: riskToSeverity[event.severity as RiskLevel] || 'info',
     title: event.title,
     description: event.description,
     timestamp: event.timestamp,
