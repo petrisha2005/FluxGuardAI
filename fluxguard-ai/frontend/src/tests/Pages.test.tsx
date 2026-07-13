@@ -7,6 +7,7 @@ import { AnalyticsPage } from '@/features/analytics/AnalyticsPage';
 import { CopilotPage } from '@/features/copilot/CopilotPage';
 import { OperationsPage } from '@/features/operations/OperationsPage';
 import { SignagePage } from '@/features/signage/SignagePage';
+import { VolunteerPage } from '@/features/volunteer/VolunteerPage';
 
 describe('AnalyticsPage', () => {
   beforeEach(() => {
@@ -72,5 +73,21 @@ describe('SignagePage', () => {
     expect(screen.getByText(/North Gate - Entrance Screen/i)).toBeInTheDocument();
     expect(screen.getByText(/East Concourse - Evacuation Screen/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Welcome to Lucusa Stadium/i).length).toBe(4);
+  });
+});
+
+describe('VolunteerPage', () => {
+  beforeEach(() => {
+    setupFetchMocks();
+    resetSimulation();
+    localStorage.clear();
+  });
+
+  it('renders volunteer command dashboard and task list', () => {
+    render(<VolunteerPage />);
+
+    expect(screen.getByText(/Volunteer Command Dashboard/i)).toBeInTheDocument();
+    expect(screen.getByText(/My Active Assignments/i)).toBeInTheDocument();
+    expect(screen.getByText(/Report Crowd Incident/i)).toBeInTheDocument();
   });
 });
