@@ -60,6 +60,7 @@ async def create_measurement(eventId: UUID, payload: MeasurementCreate):
     }
 
     database.add_measurement(measurement_record)
+    database.resolve_pending_interventions(eventId)
 
     response_obj = MeasurementResponse(**measurement_record)
 

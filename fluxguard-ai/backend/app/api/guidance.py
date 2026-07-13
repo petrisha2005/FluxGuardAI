@@ -100,6 +100,23 @@ async def approve_guidance(eventId: UUID, guidanceId: UUID):
             },
         )
 
+    # Log the intervention
+    alert_id = guidance_record.get("alert_id")
+    zone_id = None
+    if alert_id:
+        alert = database.get_alert_by_id(alert_id)
+        if alert:
+            zone_id = alert.get("zone_id")
+    if not zone_id:
+        zone_id = UUID("00000000-0000-0000-0000-000000000001")
+
+    database.log_intervention_action(
+        eventId,
+        zone_id,
+        "GUIDANCE",
+        f"Approved safety directive: {guidance_record.get('headline', 'Crowd Guidance Broadcast')}"
+    )
+
     response_obj = GuidanceResponse(**updated)
 
     await manager.broadcast_to_event(

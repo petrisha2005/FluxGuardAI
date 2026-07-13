@@ -90,6 +90,20 @@ export interface BackendIncident {
   resolvedAt: string | null;
 }
 
+export interface BackendIntervention {
+  id: string;
+  eventId: string;
+  zoneId: string;
+  type: 'GUIDANCE' | 'STAFF' | 'INCIDENT';
+  description: string;
+  triggerTick: number;
+  preDensity: number;
+  preRisk: string;
+  postDensity: number | null;
+  postRisk: string | null;
+  timestamp: string;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${config.apiBaseUrl}${path}`;
   const response = await fetch(url, {
@@ -251,4 +265,7 @@ export const api = {
     request<BackendIncident>(`/api/v1/events/${eventId}/incidents/${incidentId}/resolve`, {
       method: 'POST',
     }),
+
+  fetchInterventions: (eventId: string) =>
+    request<BackendIntervention[]>(`/api/v1/events/${eventId}/analytics/interventions`),
 };

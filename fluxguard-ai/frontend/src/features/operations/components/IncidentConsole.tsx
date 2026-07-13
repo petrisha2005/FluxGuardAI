@@ -244,7 +244,12 @@ export function IncidentConsole() {
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1">
-              <label htmlFor="report-type" className="text-[10px] font-bold text-ink-muted uppercase">Type</label>
+              <label
+                htmlFor="report-type"
+                className="text-[10px] font-bold text-ink-muted uppercase"
+              >
+                Type
+              </label>
               <select
                 id="report-type"
                 value={type}
@@ -259,7 +264,12 @@ export function IncidentConsole() {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="report-location" className="text-[10px] font-bold text-ink-muted uppercase">Location</label>
+              <label
+                htmlFor="report-location"
+                className="text-[10px] font-bold text-ink-muted uppercase"
+              >
+                Location
+              </label>
               <select
                 id="report-location"
                 value={zoneId}
@@ -275,7 +285,12 @@ export function IncidentConsole() {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="report-severity" className="text-[10px] font-bold text-ink-muted uppercase">Severity</label>
+              <label
+                htmlFor="report-severity"
+                className="text-[10px] font-bold text-ink-muted uppercase"
+              >
+                Severity
+              </label>
               <select
                 id="report-severity"
                 value={severity}
@@ -291,7 +306,12 @@ export function IncidentConsole() {
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="report-description" className="text-[10px] font-bold text-ink-muted uppercase">Description</label>
+            <label
+              htmlFor="report-description"
+              className="text-[10px] font-bold text-ink-muted uppercase"
+            >
+              Description
+            </label>
             <div className="flex gap-2">
               <input
                 id="report-description"

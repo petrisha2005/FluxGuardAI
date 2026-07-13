@@ -6,6 +6,7 @@ import { DashboardHeader } from '../dashboard/components/DashboardHeader';
 import type { CrowdZone } from '@/features/simulation/simulationTypes';
 import type { PredictionPoint } from '../dashboard/types/dashboard';
 import { api } from '@/services/api';
+import { InterventionEffectiveness } from './components/InterventionEffectiveness';
 
 const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
 
@@ -88,9 +89,10 @@ export function AnalyticsPage() {
       <DashboardHeader />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Forecast Timeline Chart */}
-        <div className="lg:col-span-2">
+        {/* Forecast Timeline Chart & Effectiveness Panel */}
+        <div className="lg:col-span-2 space-y-6">
           <PredictionTimeline predictions={predictions} />
+          <InterventionEffectiveness eventId={EVENT_ID} />
         </div>
 
         {/* Environmental & Transit modifiers */}

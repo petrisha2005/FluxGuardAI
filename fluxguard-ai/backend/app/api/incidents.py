@@ -174,6 +174,13 @@ async def resolve_incident(eventId: UUID, incidentId: UUID):
             },
         )
 
+    database.log_intervention_action(
+        eventId,
+        updated["zone_id"],
+        "INCIDENT",
+        f"Resolved {updated['type'].lower()} incident ticket: {updated.get('description', '')}"
+    )
+
     response_obj = IncidentResponse(**updated)
 
     # Broadcast websocket trigger

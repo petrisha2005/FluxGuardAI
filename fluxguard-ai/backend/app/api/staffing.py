@@ -183,6 +183,13 @@ async def redeploy_staff(eventId: UUID, request_payload: RedeploymentRequest):
         eventId, request_payload.to_zone_id, current[to_str] + request_payload.count
     )
 
+    database.log_intervention_action(
+        eventId,
+        request_payload.to_zone_id,
+        "STAFF",
+        f"Redeployed {request_payload.count} stewards to assist with congestion."
+    )
+
     updated_staff = database.get_zone_staffing(eventId)
 
     # Broadcast websocket update

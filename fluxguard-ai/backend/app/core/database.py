@@ -4,7 +4,7 @@ import logging
 import os
 import threading
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import asyncpg
 
@@ -74,6 +74,7 @@ _alerts = {}
 _guidance = []
 _feedback = []
 _incidents = []
+_interventions = []
 _zone_staffing = {
     "00000000-0000-0000-0000-000000000001": 20,
     "00000000-0000-0000-0000-000000000002": 15,
@@ -996,6 +997,7 @@ def clear_database() -> None:
         _guidance.clear()
         _feedback.clear()
         _incidents.clear()
+        _interventions.clear()
         _zone_staffing.clear()
         _zone_staffing.update({
             "00000000-0000-0000-0000-000000000001": 20,
@@ -1041,3 +1043,81 @@ def update_incident_status(
                     i["resolved_at"] = datetime.now(UTC)
                 return i
         return None
+
+
+def add_intervention(intervention: dict) -> None:
+    with _lock:
+        _interventions.append(intervention)
+
+
+def get_interventions(event_id: UUID) -> list[dict]:
+    with _lock:
+        return [i for i in _interventions if i["event_id"] == event_id]
+
+
+def update_intervention(event_id: UUID, intervention_id: UUID, updates: dict) -> None:
+    with _lock:
+        for i in _interventions:
+            if i["event_id"] == event_id and i["id"] == intervention_id:
+                i.update(updates)
+                return
+
+
+def log_intervention_action(event_id: UUID, zone_id: UUID, type_str: str, description: str) -> None:
+    measurements = get_all_measurements()
+    current_tick = len(measurements) // 4
+    
+    zone_measurements = [m for m in measurements if m["zone_id"] == zone_id]
+    latest_m = max(zone_measurements, key=lambda x: x["measured_at"]) if zone_measurements else None
+    
+    zone = _zones.get(zone_id)
+    capacity = zone["capacity"] if zone else 500
+    density_percentage = 0
+    if latest_m and capacity > 0:
+        density_percentage = round((latest_m["density_count"] / capacity) * 100)
+        
+    risk_scores = get_latest_risk_scores(event_id)
+    latest_risk = next((s for s in risk_scores if s["zone_id"] == zone_id), None)
+    pre_risk = latest_risk["severity"].upper() if latest_risk else "LOW"
+    
+    intervention = {
+        "id": uuid4(),
+        "event_id": event_id,
+        "zone_id": zone_id,
+        "type": type_str,
+        "description": description,
+        "trigger_tick": current_tick,
+        "pre_density": density_percentage,
+        "pre_risk": pre_risk,
+        "post_density": None,
+        "post_risk": None,
+        "timestamp": datetime.now(UTC),
+    }
+    add_intervention(intervention)
+
+
+def resolve_pending_interventions(event_id: UUID) -> None:
+    with _lock:
+        measurements = list(_measurements)
+        current_tick = len(measurements) // 4
+        
+        for i in _interventions:
+            if i["event_id"] == event_id and i["post_density"] is None:
+                # Resolve after 2 ticks
+                if current_tick >= i["trigger_tick"] + 2:
+                    zone_id = i["zone_id"]
+                    zone_measurements = [m for m in measurements if m["zone_id"] == zone_id]
+                    latest_m = max(zone_measurements, key=lambda x: x["measured_at"]) if zone_measurements else None
+                    
+                    zone = _zones.get(zone_id)
+                    capacity = zone["capacity"] if zone else 500
+                    density_percentage = 0
+                    if latest_m and capacity > 0:
+                        density_percentage = round((latest_m["density_count"] / capacity) * 100)
+                        
+                    risk_scores = [score for zone_id, score in _risk_scores.items()]
+                    latest_risk = next((s for s in risk_scores if s["zone_id"] == zone_id), None)
+                    post_risk = latest_risk["severity"].upper() if latest_risk else "LOW"
+                    
+                    i["post_density"] = density_percentage
+                    i["post_risk"] = post_risk

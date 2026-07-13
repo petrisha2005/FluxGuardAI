@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.alerts import router as alerts_router
+from app.api.analytics import router as analytics_router
 from app.api.events import router as events_router
 from app.api.feedback import router as feedback_router
 from app.api.guidance import router as guidance_router
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
     app.include_router(copilot_router, prefix=settings.api_v1_prefix)
     app.include_router(staffing_router, prefix=settings.api_v1_prefix)
     app.include_router(incidents_router, prefix=settings.api_v1_prefix)
+    app.include_router(analytics_router, prefix=settings.api_v1_prefix)
 
     return app
 
