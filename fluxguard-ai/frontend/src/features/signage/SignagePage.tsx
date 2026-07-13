@@ -60,7 +60,10 @@ export function SignagePage() {
   // Map approved guidance to zone IDs
   const guidanceByZone: Record<string, SignageGuidance> = {};
   approvedDirectives.forEach((g) => {
-    const matchEvent = state.events.find((e) => e.id.toLowerCase() === g.alertId.toLowerCase());
+    if (!g || !g.alertId) return;
+    const matchEvent = state.events.find(
+      (e) => e && e.id && e.id.toLowerCase() === g.alertId.toLowerCase(),
+    );
     if (matchEvent) {
       guidanceByZone[matchEvent.zoneId] = g;
     }

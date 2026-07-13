@@ -83,6 +83,7 @@ class GuidanceResponse(BaseModel):
         populate_by_name=True,
     )
     guidance_id: UUID
+    alert_id: UUID
     audience_role: str
     severity: str
     headline: str

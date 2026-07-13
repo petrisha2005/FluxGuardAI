@@ -103,4 +103,5 @@ async def test_get_active_approved_guidance(setup_mock_signage) -> None:
         # Only the unexpired approved directive should return!
         assert len(data) == 1
         assert data[0]["guidanceId"] == str(g1["guidance_id"])
+        assert data[0]["alertId"] == str(g1["alert_id"])
         assert data[0]["status"] == "APPROVED"
