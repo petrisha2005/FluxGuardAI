@@ -73,6 +73,7 @@ _risk_scores = {}
 _alerts = {}
 _guidance = []
 _feedback = []
+_incidents = []
 _zone_staffing = {
     "00000000-0000-0000-0000-000000000001": 20,
     "00000000-0000-0000-0000-000000000002": 15,
@@ -994,6 +995,7 @@ def clear_database() -> None:
         _alerts.clear()
         _guidance.clear()
         _feedback.clear()
+        _incidents.clear()
         _zone_staffing.clear()
         _zone_staffing.update({
             "00000000-0000-0000-0000-000000000001": 20,
@@ -1011,3 +1013,31 @@ def get_zone_staffing(event_id: UUID) -> dict[str, int]:
 def update_zone_staffing(event_id: UUID, zone_id: UUID, count: int) -> None:
     with _lock:
         _zone_staffing[str(zone_id)] = count
+
+
+def add_incident(incident: dict) -> None:
+    with _lock:
+        _incidents.append(incident)
+
+
+def get_incidents(event_id: UUID) -> list[dict]:
+    with _lock:
+        return [i for i in _incidents if i["event_id"] == event_id]
+
+
+def update_incident_status(
+    event_id: UUID,
+    incident_id: UUID,
+    status: str,
+    responder: str | None = None
+) -> dict | None:
+    with _lock:
+        for i in _incidents:
+            if i["event_id"] == event_id and i["id"] == incident_id:
+                i["status"] = status
+                if responder:
+                    i["responder_name"] = responder
+                if status == "RESOLVED":
+                    i["resolved_at"] = datetime.now(UTC)
+                return i
+        return None

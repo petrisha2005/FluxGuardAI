@@ -77,6 +77,19 @@ export interface BackendStaffingStatus {
   suggestions: BackendStaffingSuggestion[];
 }
 
+export interface BackendIncident {
+  id: string;
+  eventId: string;
+  zoneId: string;
+  type: string;
+  severity: string;
+  status: string;
+  description: string;
+  responderName: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${config.apiBaseUrl}${path}`;
   const response = await fetch(url, {
@@ -211,5 +224,31 @@ export const api = {
     }>(`/api/v1/events/${eventId}/staffing/redeploy`, {
       method: 'POST',
       body: JSON.stringify({ fromZoneId, toZoneId, count }),
+    }),
+
+  fetchIncidents: (eventId: string) =>
+    request<BackendIncident[]>(`/api/v1/events/${eventId}/incidents`),
+
+  createIncident: (
+    eventId: string,
+    zoneId: string,
+    type: string,
+    severity: string,
+    description: string,
+  ) =>
+    request<BackendIncident>(`/api/v1/events/${eventId}/incidents`, {
+      method: 'POST',
+      body: JSON.stringify({ zoneId, type, severity, description }),
+    }),
+
+  dispatchResponder: (eventId: string, incidentId: string, responderName: string) =>
+    request<BackendIncident>(`/api/v1/events/${eventId}/incidents/${incidentId}/dispatch`, {
+      method: 'POST',
+      body: JSON.stringify({ responderName }),
+    }),
+
+  resolveIncident: (eventId: string, incidentId: string) =>
+    request<BackendIncident>(`/api/v1/events/${eventId}/incidents/${incidentId}/resolve`, {
+      method: 'POST',
     }),
 };

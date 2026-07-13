@@ -4,6 +4,7 @@ import { GuidancePanel } from '../dashboard/components/GuidancePanel';
 import { LiveEventFeed } from '../dashboard/components/LiveEventFeed';
 import { FeedbackPanel } from '../dashboard/components/FeedbackPanel';
 import { StaffingPanel } from './components/StaffingPanel';
+import { IncidentConsole } from './components/IncidentConsole';
 import { useSimulationState } from '@/features/simulation/simulationStore';
 import type {
   RiskAssessment,
@@ -23,7 +24,7 @@ const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
 const riskToSeverity: Record<RiskLevel, AlertSeverity> = {
   LOW: 'info',
   MEDIUM: 'warning',
-  HIGH: 'warning',
+  HIGH: 'error',
   CRITICAL: 'critical',
 };
 
@@ -112,9 +113,10 @@ export function OperationsPage() {
       <DashboardHeader />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">
-        {/* Left Column: Log of events (Live log) */}
-        <div>
+        {/* Left Column: Log of events (Live log) & Incident dispatch */}
+        <div className="space-y-6">
           <LiveEventFeed items={events} />
+          <IncidentConsole />
         </div>
 
         {/* Right Column: Directives actions & Reports feedback forms */}
