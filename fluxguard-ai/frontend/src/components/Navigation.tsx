@@ -18,8 +18,7 @@ export function Navigation() {
         </NavLink>
         <div className="flex items-center gap-6">
           <NavLink
-            to="/"
-            end
+            to="/dashboard"
             className={({ isActive }) =>
               `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
                 isActive

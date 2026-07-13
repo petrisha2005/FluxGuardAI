@@ -6,13 +6,15 @@ import { CopilotPage } from '@/features/copilot/CopilotPage';
 import { OperationsPage } from '@/features/operations/OperationsPage';
 import { SignagePage } from '@/features/signage/SignagePage';
 import { VolunteerPage } from '@/features/volunteer/VolunteerPage';
+import { LandingPage } from '@/features/landing/LandingPage';
 import { AppLayout } from '@/layouts/AppLayout';
 
 export function App() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route index element={<DashboardPage />} />
+        <Route index element={<LandingPage />} />
+        <Route path="dashboard" element={<DashboardPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="copilot" element={<CopilotPage />} />
         <Route path="operations" element={<OperationsPage />} />

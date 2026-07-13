@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { resetSimulation } from '@/features/simulation/simulationStore';
@@ -8,6 +9,7 @@ import { CopilotPage } from '@/features/copilot/CopilotPage';
 import { OperationsPage } from '@/features/operations/OperationsPage';
 import { SignagePage } from '@/features/signage/SignagePage';
 import { VolunteerPage } from '@/features/volunteer/VolunteerPage';
+import { LandingPage } from '@/features/landing/LandingPage';
 
 describe('AnalyticsPage', () => {
   beforeEach(() => {
@@ -90,5 +92,26 @@ describe('VolunteerPage', () => {
     expect(screen.getByText(/Volunteer Command Dashboard/i)).toBeInTheDocument();
     expect(screen.getByText(/My Active Assignments/i)).toBeInTheDocument();
     expect(screen.getByText(/Report Crowd Incident/i)).toBeInTheDocument();
+  });
+});
+
+describe('LandingPage', () => {
+  beforeEach(() => {
+    setupFetchMocks();
+    resetSimulation();
+  });
+
+  it('renders 3D landing page copy and primary CTAs', () => {
+    render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('heading', { name: /FluxGuard AI/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Enter Command Center/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Steward Volunteer Mode/i })).toBeInTheDocument();
+    expect(screen.getByText(/Predictive Forecasts/i)).toBeInTheDocument();
+    expect(screen.getByText(/Resource Allocation/i)).toBeInTheDocument();
   });
 });

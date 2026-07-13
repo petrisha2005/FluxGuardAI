@@ -12,7 +12,10 @@ describe('App', () => {
 
   it('renders the application shell', () => {
     render(
-      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+      <MemoryRouter
+        initialEntries={['/dashboard']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
         <App />
       </MemoryRouter>,
     );
@@ -23,7 +26,10 @@ describe('App', () => {
 
   it('provides an accessible skip link and live loading status', () => {
     render(
-      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+      <MemoryRouter
+        initialEntries={['/dashboard']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
         <App />
       </MemoryRouter>,
     );
