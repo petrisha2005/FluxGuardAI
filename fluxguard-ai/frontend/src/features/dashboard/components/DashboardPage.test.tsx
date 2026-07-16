@@ -56,4 +56,18 @@ describe('DashboardPage', () => {
 
     expect(screen.queryByLabelText(/Peak Density: 86%/i)).not.toBeInTheDocument();
   });
+
+  it('toggles to CCTV feeds view when tab is clicked', async () => {
+    render(<DashboardPage />);
+
+    const cctvTab = screen.getByRole('button', { name: /CCTV Video Feeds/i });
+    expect(cctvTab).toBeInTheDocument();
+
+    act(() => {
+      cctvTab.click();
+    });
+
+    expect(await screen.findByText(/Computer Vision CCTV Feeds/i)).toBeInTheDocument();
+    expect(screen.getByText(/Mute CCTV Congestion Alerts/i)).toBeInTheDocument();
+  });
 });

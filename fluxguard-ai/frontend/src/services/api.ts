@@ -24,6 +24,16 @@ export interface BackendVenue {
   };
 }
 
+export interface BackendCamera {
+  id: string;
+  zoneId: string;
+  name: string;
+  fps: number;
+  accuracy: number;
+  status: string;
+}
+
+
 
 export interface BackendZone {
   id: string;
@@ -149,6 +159,8 @@ export const api = {
   fetchEvents: () => request<BackendEvent[]>('/api/v1/events'),
 
   fetchZones: (eventId: string) => request<BackendZone[]>(`/api/v1/events/${eventId}/zones`),
+
+  fetchCameras: (eventId: string) => request<BackendCamera[]>(`/api/v1/events/${eventId}/cameras`),
 
   runPredictionsCycle: (eventId: string) =>
     request<BackendPrediction[]>(`/api/v1/events/${eventId}/predictions/run`, {

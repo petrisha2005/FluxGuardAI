@@ -11,6 +11,7 @@ import { CrowdZonePanel } from './components/CrowdZonePanel';
 import { DashboardHeader } from './components/DashboardHeader';
 import { RiskOverview } from './components/RiskOverview';
 import { FlowVisualizer } from './components/FlowVisualizer';
+import { CctvFeedGrid } from './components/CctvFeedGrid';
 import type {
   DashboardSummary,
   StadiumZone,
@@ -176,7 +177,7 @@ function selectDashboardState(state: SimulationState) {
 export function DashboardPage() {
   const simulationState = useSimulationState();
   const dashboardState = selectDashboardState(simulationState);
-  const [activeTab, setActiveTab] = useState<'zones' | 'flow'>('zones');
+  const [activeTab, setActiveTab] = useState<'zones' | 'flow' | 'cctv'>('zones');
 
   return (
     <div className="space-y-6">
@@ -205,12 +206,24 @@ export function DashboardPage() {
         >
           Digital Twin Flow Visualizer
         </button>
+        <button
+          onClick={() => setActiveTab('cctv')}
+          className={`pb-2.5 text-sm font-semibold border-b-2 transition-all duration-200 ${
+            activeTab === 'cctv'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-ink-muted hover:text-ink'
+          }`}
+        >
+          CCTV Video Feeds
+        </button>
       </div>
 
       {activeTab === 'zones' ? (
         <CrowdZonePanel zones={dashboardState.zones} />
-      ) : (
+      ) : activeTab === 'flow' ? (
         <FlowVisualizer />
+      ) : (
+        <CctvFeedGrid />
       )}
     </div>
   );

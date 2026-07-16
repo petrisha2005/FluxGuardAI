@@ -573,3 +573,11 @@ export function setZoneDetour(zoneId: string, detourTargetId: string | undefined
     emitChange();
   }
 }
+
+export function getSimIdFromUuid(uuid: string): string {
+  return REV_ZONE_MAP[uuid] || '';
+}
+
+export function getUuidFromSimId(simId: string): string {
+  return ZONE_MAP[simId] || '';
+}
