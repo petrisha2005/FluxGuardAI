@@ -34,6 +34,7 @@ class StaffingStatusResponse(BaseModel):
     current_staff: dict[str, int]
     recommended_staff: dict[str, int]
     suggestions: list[dict]
+    alerts: list[str] = []
 
 
 @router.get("", response_model=StandardResponse)
@@ -58,7 +59,7 @@ async def get_staffing_status(eventId: UUID):
     zones = database.get_zones_for_event(eventId)
     if not zones:
         return StandardResponse(
-            data=StaffingStatusResponse(current_staff={}, recommended_staff={}, suggestions=[])
+            data=StaffingStatusResponse(current_staff={}, recommended_staff={}, suggestions=[], alerts=[])
         )
 
     risk_scores = database.get_latest_risk_scores(eventId)
@@ -98,8 +99,9 @@ async def get_staffing_status(eventId: UUID):
     # Compute surplus / deficit pairs to generate suggestions
     surpluses = []
     deficits = []
-    for zone_id_str in current:
-        curr = current[zone_id_str]
+    for zone in zones:
+        zone_id_str = str(zone["id"])
+        curr = current.get(zone_id_str, 0)
         rec = recommended.get(zone_id_str, curr)
         delta = curr - rec
         if delta > 0:
@@ -135,11 +137,32 @@ async def get_staffing_status(eventId: UUID):
         if d["amount"] <= 0:
             d_idx += 1
 
+    # Calculate predictive staffing alerts based on forecasted crowd density surges
+    predictive_alerts = []
+    predictions = database.get_predictions(eventId)
+    zone_names = {str(z["id"]): z["name"] for z in zones}
+
+    for p in predictions:
+        z_id_str = str(p["zone_id"])
+        if p.get("predicted_density", 0) > 75:
+            curr = current.get(z_id_str, 0)
+            rec = recommended.get(z_id_str, curr)
+            delta = curr - rec
+            if delta < 0:
+                alert_msg = (
+                    f"Upcoming Crowd Surge: Zone {zone_names.get(z_id_str, z_id_str)} is projected "
+                    f"to reach {p['predicted_density']}% density within {p['horizon_minutes']} minutes. "
+                    f"Deficit of {abs(delta)} stewards detected; immediate redeployment recommended."
+                )
+                if alert_msg not in predictive_alerts:
+                    predictive_alerts.append(alert_msg)
+
     return StandardResponse(
         data=StaffingStatusResponse(
             current_staff=current,
             recommended_staff=recommended,
             suggestions=suggestions,
+            alerts=predictive_alerts,
         )
     )
 

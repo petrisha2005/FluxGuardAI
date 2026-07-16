@@ -119,6 +119,27 @@ export function StaffingPanel() {
           </ResponsiveContainer>
         </div>
 
+        {/* Predictive Staffing Alerts */}
+        {data.alerts && data.alerts.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-500">
+              Predictive Staffing Alerts ({data.alerts.length})
+            </h3>
+            <div className="grid gap-2">
+              {data.alerts.map((alert, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-400 flex items-start gap-2.5"
+                  data-testid="predictive-staffing-alert"
+                >
+                  <span className="text-sm">⚠️</span>
+                  <span>{alert}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Redeployment Suggestions */}
         <div className="space-y-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-ink-muted">

@@ -83,3 +83,34 @@ async def test_execute_redeploy() -> None:
         updated = data["currentStaff"]
         assert updated[ZONE_1] == 15  # 20 - 5
         assert updated[ZONE_3] == 30  # 25 + 5
+
+
+@pytest.mark.asyncio
+async def test_get_staffing_predictive_alerts() -> None:
+    # Add a future prediction for ZONE_3 forecasting a crowd surge (85% density in 20 minutes)
+    database.add_prediction({
+        "id": uuid4(),
+        "zone_id": UUID(ZONE_3),
+        "horizon_minutes": 20,
+        "predicted_density": 85,
+        "predicted_queue_length": 150,
+        "predicted_flow_rate": 12.0,
+        "confidence_interval_low": 75,
+        "confidence_interval_high": 95,
+        "generated_at": datetime.now(UTC),
+        "model_version": "prophet-test",
+    })
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        headers = {"Authorization": "Bearer mock-operator"}
+        response = await client.get(
+            f"/api/v1/events/{SEED_EVENT_ID}/staffing",
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()["data"]
+        
+        assert "alerts" in data
+        assert len(data["alerts"]) > 0
+        assert any("Upcoming Crowd Surge" in a and "Gate C" in a for a in data["alerts"])

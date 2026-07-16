@@ -46,6 +46,9 @@ describe('CopilotPage', () => {
   });
 });
 
+import { api } from '@/services/api';
+import type { BackendStaffingStatus } from '@/services/api';
+
 describe('OperationsPage', () => {
   beforeEach(() => {
     setupFetchMocks();
@@ -61,6 +64,42 @@ describe('OperationsPage', () => {
       screen.getByRole('article', { name: /Gate C forecast pressure detected/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /submit feedback/i })).toBeInTheDocument();
+  });
+
+  it('renders predictive staffing alerts in the StaffingPanel', async () => {
+    const mockStaffingStatus: BackendStaffingStatus = {
+      currentStaff: {
+        '00000000-0000-0000-0000-000000000001': 20,
+        '00000000-0000-0000-0000-000000000003': 25,
+      },
+      recommendedStaff: {
+        '00000000-0000-0000-0000-000000000001': 15,
+        '00000000-0000-0000-0000-000000000003': 30,
+      },
+      suggestions: [
+        {
+          fromZoneId: '00000000-0000-0000-0000-000000000001',
+          toZoneId: '00000000-0000-0000-0000-000000000003',
+          count: 5,
+          reason: 'Redeploy 5 stewards from North Gate to cover congestion risks.',
+        },
+      ],
+      alerts: [
+        'Upcoming Crowd Surge: Zone Gate C is projected to reach 85% density within 20 minutes. Deficit of 5 stewards detected; immediate redeployment recommended.',
+      ],
+    };
+
+    const getStaffingSpy = vi.spyOn(api, 'getStaffingStatus').mockResolvedValue(mockStaffingStatus);
+
+    render(<OperationsPage />);
+
+    // Wait for the predictive staffing alert warning to render
+    expect(await screen.findByTestId('predictive-staffing-alert')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Zone Gate C is projected to reach 85% density within 20 minutes/i),
+    ).toBeInTheDocument();
+
+    getStaffingSpy.mockRestore();
   });
 });
 

@@ -109,6 +109,7 @@ export interface BackendStaffingStatus {
   currentStaff: Record<string, number>;
   recommendedStaff: Record<string, number>;
   suggestions: BackendStaffingSuggestion[];
+  alerts?: string[];
 }
 
 export interface BackendIncident {
