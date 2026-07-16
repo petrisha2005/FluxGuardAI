@@ -4,9 +4,12 @@ import { motion } from 'framer-motion';
 import { Badge, StatusIndicator } from '@/components/ui';
 import { api } from '@/services/api';
 
-const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
+import { useSimulationState, getActiveEventId } from '@/features/simulation/simulationStore';
 
 export function DashboardHeader() {
+  const sim = useSimulationState();
+  const activeEventId = getActiveEventId();
+
   const [integrations, setIntegrations] = useState<{
     weather: {
       status: string;
@@ -31,7 +34,7 @@ export function DashboardHeader() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await api.fetchIntegrationsStatus(EVENT_ID);
+        const response = await api.fetchIntegrationsStatus(activeEventId);
         setIntegrations(response);
       } catch (err) {
         console.warn('Failed to fetch integrations status:', err);
@@ -41,7 +44,7 @@ export function DashboardHeader() {
     fetchStatus();
     const interval = setInterval(fetchStatus, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeEventId]);
 
   return (
     <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between border-b border-white/10 pb-6">

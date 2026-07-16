@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
 import { api } from '@/services/api';
-import { useSimulationState } from '@/features/simulation/simulationStore';
+import { useSimulationState, getActiveEventId } from '@/features/simulation/simulationStore';
 
 export function LandingPage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -10,6 +10,7 @@ export function LandingPage() {
 
   // Get reactive simulation state for real-time density and risk levels
   const { zones } = useSimulationState();
+  const activeEventId = getActiveEventId();
 
   // Calculate density and risk dynamically from simulation state
   const totalDensity = zones.length > 0
@@ -33,8 +34,8 @@ export function LandingPage() {
     const fetchTelemetry = async () => {
       try {
         const [incidents, staffing] = await Promise.all([
-          api.fetchIncidents('e0000000-0000-0000-0000-000000000000'),
-          api.getStaffingStatus('e0000000-0000-0000-0000-000000000000'),
+          api.fetchIncidents(activeEventId),
+          api.getStaffingStatus(activeEventId),
         ]);
 
         if (incidents) {

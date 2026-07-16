@@ -5,7 +5,7 @@ import { LiveEventFeed } from '../dashboard/components/LiveEventFeed';
 import { FeedbackPanel } from '../dashboard/components/FeedbackPanel';
 import { StaffingPanel } from './components/StaffingPanel';
 import { IncidentConsole } from './components/IncidentConsole';
-import { useSimulationState } from '@/features/simulation/simulationStore';
+import { useSimulationState, getActiveEventId } from '@/features/simulation/simulationStore';
 import type {
   RiskAssessment,
   CrowdZone,
@@ -15,8 +15,6 @@ import type {
 import type { GuidanceRecommendation, EventFeedItem } from '../dashboard/types/dashboard';
 import type { AlertSeverity } from '@/components/ui';
 import { api } from '@/services/api';
-
-const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
 
 const riskToSeverity: Record<RiskLevel, AlertSeverity> = {
   LOW: 'info',
@@ -74,6 +72,7 @@ function toEventFeedItems(events: SimulationEvent[]): EventFeedItem[] {
 
 export function OperationsPage() {
   const state = useSimulationState();
+  const activeEventId = getActiveEventId();
   const rawGuidance = getGuidance(state.riskAssessments, state.zones, state.tick);
   const events = toEventFeedItems(state.events);
 
@@ -89,7 +88,7 @@ export function OperationsPage() {
 
   const handleApprove = async () => {
     try {
-      await api.approveGuidance(EVENT_ID, guidanceId);
+      await api.approveGuidance(activeEventId, guidanceId);
       setApprovedStatus((prev) => ({ ...prev, [guidanceId]: 'APPROVED' }));
     } catch (err) {
       console.error('Failed to approve safety guidance message', err);
@@ -98,7 +97,7 @@ export function OperationsPage() {
 
   const handleReject = async () => {
     try {
-      await api.rejectGuidance(EVENT_ID, guidanceId);
+      await api.rejectGuidance(activeEventId, guidanceId);
       setApprovedStatus((prev) => ({ ...prev, [guidanceId]: 'REJECTED' }));
     } catch (err) {
       console.error('Failed to reject/archive safety guidance message', err);

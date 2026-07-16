@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '@/services/api';
 import { setupFetchMocks } from '@/tests/testMocks';
+import { resetSimulation } from '@/features/simulation/simulationStore';
 import { CopilotPanel } from './CopilotPanel';
 
 describe('CopilotPanel', () => {
   beforeEach(() => {
     setupFetchMocks();
+    resetSimulation();
   });
 
   it('renders initial welcome message and suggestion chips', () => {

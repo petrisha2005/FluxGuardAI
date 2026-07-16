@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Panel } from '@/components/ui';
-import { useSimulationState } from '@/features/simulation/simulationStore';
+import { useSimulationState, getActiveEventId } from '@/features/simulation/simulationStore';
 import { PredictionTimeline } from '../dashboard/components/PredictionTimeline';
 import { DashboardHeader } from '../dashboard/components/DashboardHeader';
 import type { CrowdZone } from '@/features/simulation/simulationTypes';
 import type { PredictionPoint } from '../dashboard/types/dashboard';
 import { api } from '@/services/api';
 import { InterventionEffectiveness } from './components/InterventionEffectiveness';
-
-const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
 
 function getPredictionData(zones: CrowdZone[]): PredictionPoint[] {
   const averageDensity = Math.round(
@@ -72,6 +70,7 @@ interface IntegrationState {
 
 export function AnalyticsPage() {
   const simulationState = useSimulationState();
+  const activeEventId = getActiveEventId();
   const predictions = getPredictionData(simulationState.zones);
 
   const [integrations, setIntegrations] = useState<IntegrationState | null>(null);
@@ -79,7 +78,7 @@ export function AnalyticsPage() {
   useEffect(() => {
     const fetchIntegrations = async () => {
       try {
-        const data = await api.fetchIntegrationsStatus(EVENT_ID);
+        const data = await api.fetchIntegrationsStatus(activeEventId);
         setIntegrations(data);
       } catch (err) {
         console.error('Failed to load telemetry integrations', err);
@@ -88,7 +87,7 @@ export function AnalyticsPage() {
     fetchIntegrations();
     const interval = setInterval(fetchIntegrations, 6000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeEventId]);
 
   return (
     <div className="space-y-6">
@@ -98,7 +97,7 @@ export function AnalyticsPage() {
         {/* Forecast Timeline Chart & Effectiveness Panel */}
         <div className="lg:col-span-2 space-y-6">
           <PredictionTimeline predictions={predictions} />
-          <InterventionEffectiveness eventId={EVENT_ID} />
+          <InterventionEffectiveness eventId={activeEventId} />
         </div>
 
         {/* Environmental & Transit modifiers */}

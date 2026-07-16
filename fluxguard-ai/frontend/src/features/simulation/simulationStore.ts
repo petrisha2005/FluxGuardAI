@@ -611,3 +611,35 @@ export function cancelEvacuation() {
   };
   emitChange();
 }
+
+export function registerFeedbackAnomaly(zoneId: string, rating: number, comment: string) {
+  const zoneIndex = currentState.zones.findIndex((z) => z.id === zoneId);
+  if (zoneIndex === -1) return;
+
+  const zoneName = currentState.zones[zoneIndex].name;
+  const timestamp = getSimulationTimestamp(currentState.tick);
+
+  const newEvent = {
+    id: `feedback-anomaly-${Date.now()}`,
+    zoneId,
+    severity: rating === 1 ? ('HIGH' as const) : ('MEDIUM' as const),
+    title: `Field Anomaly reported at ${zoneName}`,
+    description: `Feedback comment: "${comment}" (Rating: ${rating}/5)`,
+    timestamp: formatTimestamp(timestamp),
+  };
+
+  const updatedZones = [...currentState.zones];
+  updatedZones[zoneIndex] = {
+    ...updatedZones[zoneIndex],
+    risk: rating === 1 ? 'critical' : 'high',
+    density: Math.min(95, updatedZones[zoneIndex].density + 15),
+  };
+
+  currentState = {
+    ...currentState,
+    zones: updatedZones,
+    events: [newEvent, ...currentState.events].slice(0, MAX_EVENTS),
+  };
+
+  emitChange();
+}

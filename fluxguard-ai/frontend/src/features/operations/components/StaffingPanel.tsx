@@ -14,7 +14,7 @@ import { Panel } from '@/components/ui';
 import { api } from '@/services/api';
 import type { BackendStaffingStatus, BackendStaffingSuggestion } from '@/services/api';
 
-const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
+import { useSimulationState, getActiveEventId } from '@/features/simulation/simulationStore';
 
 const ZONE_LABELS: Record<string, string> = {
   '00000000-0000-0000-0000-000000000001': 'North Gate',
@@ -24,12 +24,15 @@ const ZONE_LABELS: Record<string, string> = {
 };
 
 export function StaffingPanel() {
+  const sim = useSimulationState();
+  const activeEventId = getActiveEventId();
+
   const [data, setData] = useState<BackendStaffingStatus | null>(null);
   const [isRedeploying, setIsRedeploying] = useState<string | null>(null);
 
   const fetchStaffing = async () => {
     try {
-      const response = await api.getStaffingStatus(EVENT_ID);
+      const response = await api.getStaffingStatus(activeEventId);
       setData(response);
     } catch (err) {
       console.warn('Failed to load staffing status:', err);
@@ -40,14 +43,14 @@ export function StaffingPanel() {
     fetchStaffing();
     const interval = setInterval(fetchStaffing, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeEventId]);
 
   const handleRedeploy = async (suggestion: BackendStaffingSuggestion, index: number) => {
     const key = `${suggestion.fromZoneId}-${suggestion.toZoneId}-${index}`;
     setIsRedeploying(key);
     try {
       await api.redeployStaff(
-        EVENT_ID,
+        activeEventId,
         suggestion.fromZoneId,
         suggestion.toZoneId,
         suggestion.count,

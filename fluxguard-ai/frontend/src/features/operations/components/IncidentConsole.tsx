@@ -4,7 +4,7 @@ import { Panel } from '@/components/ui';
 import { api } from '@/services/api';
 import type { BackendIncident } from '@/services/api';
 
-const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
+import { useSimulationState, getActiveEventId } from '@/features/simulation/simulationStore';
 
 const ZONE_LABELS: Record<string, string> = {
   '00000000-0000-0000-0000-000000000001': 'North Gate',
@@ -161,6 +161,9 @@ function IncidentCard({
 }
 
 export function IncidentConsole() {
+  const sim = useSimulationState();
+  const activeEventId = getActiveEventId();
+
   const [incidents, setIncidents] = useState<BackendIncident[]>([]);
   const [type, setType] = useState('MEDICAL');
   const [zoneId, setZoneId] = useState('00000000-0000-0000-0000-000000000001');
@@ -170,7 +173,7 @@ export function IncidentConsole() {
 
   const fetchTickets = async () => {
     try {
-      const response = await api.fetchIncidents(EVENT_ID);
+      const response = await api.fetchIncidents(activeEventId);
       // Sort: Critical/High/Medium/Low, and then active before resolved
       const severityOrder: Record<string, number> = {
         CRITICAL: 4,
@@ -193,7 +196,7 @@ export function IncidentConsole() {
     fetchTickets();
     const interval = setInterval(fetchTickets, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeEventId]);
 
   const handleReport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,7 +204,7 @@ export function IncidentConsole() {
 
     setIsSubmitting(true);
     try {
-      await api.createIncident(EVENT_ID, zoneId, type, severity, description);
+      await api.createIncident(activeEventId, zoneId, type, severity, description);
       setDescription('');
       await fetchTickets();
     } catch (err) {
@@ -213,7 +216,7 @@ export function IncidentConsole() {
 
   const handleDispatch = async (incidentId: string, responderName: string) => {
     try {
-      await api.dispatchResponder(EVENT_ID, incidentId, responderName);
+      await api.dispatchResponder(activeEventId, incidentId, responderName);
       await fetchTickets();
     } catch (err) {
       console.error('Failed to dispatch responder:', err);
@@ -222,7 +225,7 @@ export function IncidentConsole() {
 
   const handleResolve = async (incidentId: string) => {
     try {
-      await api.resolveIncident(EVENT_ID, incidentId);
+      await api.resolveIncident(activeEventId, incidentId);
       await fetchTickets();
     } catch (err) {
       console.error('Failed to resolve incident:', err);

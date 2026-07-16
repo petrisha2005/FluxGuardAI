@@ -6,7 +6,7 @@ import { api } from '@/services/api';
 
 import { cn } from '@/utils/classNames';
 
-const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
+import { useSimulationState, getActiveEventId } from '@/features/simulation/simulationStore';
 
 interface ChatMessage {
   id: string;
@@ -23,6 +23,9 @@ const SUGGESTIONS = [
 ];
 
 export function CopilotPanel({ className }: { className?: string }) {
+  const sim = useSimulationState();
+  const activeEventId = getActiveEventId();
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'init-msg',
@@ -59,7 +62,7 @@ export function CopilotPanel({ className }: { className?: string }) {
 
     try {
       // Offline/online unified copilot endpoint
-      const response = await api.submitCopilotMessage(EVENT_ID, textToSend);
+      const response = await api.submitCopilotMessage(activeEventId, textToSend);
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         sender: 'assistant',
