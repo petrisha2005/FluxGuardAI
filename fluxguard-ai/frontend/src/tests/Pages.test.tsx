@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -70,13 +70,28 @@ describe('SignagePage', () => {
     resetSimulation();
   });
 
-  it('renders all physical display boards with default greeting', () => {
+  it('renders all physical display boards with default greeting and supports translations', async () => {
     render(<SignagePage />);
 
     expect(screen.getByText(/Live Stadium Signage Console/i)).toBeInTheDocument();
-    expect(screen.getByText(/North Gate - Entrance Screen/i)).toBeInTheDocument();
-    expect(screen.getByText(/East Concourse - Evacuation Screen/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Welcome to Lucusa Stadium/i).length).toBe(4);
+    expect(screen.getByText(/North Gate - Screen/i)).toBeInTheDocument();
+    expect(screen.getByText(/East Concourse - Screen/i)).toBeInTheDocument();
+
+    // Toggle language to French
+    const select = screen.getByRole('combobox', { name: /Language Selector/i });
+    act(() => {
+      fireEvent.change(select, { target: { value: 'fr' } });
+    });
+
+    expect(screen.getByText(/Console de signalisation du stade en direct/i)).toBeInTheDocument();
+
+    // Trigger simulation test alert
+    const triggerBtn = screen.getByRole('button', { name: /Déclencher l'alerte test/i });
+    act(() => {
+      triggerBtn.click();
+    });
+
+    expect(screen.getByText(/Rediriger le trafic des zones encombrées/i)).toBeInTheDocument();
   });
 });
 

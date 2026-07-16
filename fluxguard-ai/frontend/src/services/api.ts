@@ -33,6 +33,15 @@ export interface BackendCamera {
   status: string;
 }
 
+export interface BackendRoutingRecommendation {
+  sourceZoneId: string;
+  targetZoneId: string;
+  reason: string;
+  delayReductionMinutes: number;
+  confidence: number;
+  reliefTimeMinutes: number;
+}
+
 
 
 export interface BackendZone {
@@ -161,6 +170,9 @@ export const api = {
   fetchZones: (eventId: string) => request<BackendZone[]>(`/api/v1/events/${eventId}/zones`),
 
   fetchCameras: (eventId: string) => request<BackendCamera[]>(`/api/v1/events/${eventId}/cameras`),
+
+  fetchRoutingRecommendations: (eventId: string) =>
+    request<BackendRoutingRecommendation[]>(`/api/v1/events/${eventId}/routing-recommendations`),
 
   runPredictionsCycle: (eventId: string) =>
     request<BackendPrediction[]>(`/api/v1/events/${eventId}/predictions/run`, {

@@ -70,4 +70,56 @@ describe('DashboardPage', () => {
     expect(await screen.findByText(/Computer Vision CCTV Feeds/i)).toBeInTheDocument();
     expect(screen.getByText(/Mute CCTV Congestion Alerts/i)).toBeInTheDocument();
   });
+
+  it('renders routing panel recommendations and handles apply actions', async () => {
+    render(<DashboardPage />);
+
+    expect(
+      await screen.findByText(/AI Dynamic Routing Suggestion/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/High queue backlog detected at Gate C/i)).toBeInTheDocument();
+
+    const applyButton = screen.getByRole('button', { name: /Apply AI Detour Route/i });
+    expect(applyButton).toBeInTheDocument();
+
+    act(() => {
+      applyButton.click();
+    });
+
+    expect(screen.getByText(/Detour Applied/i)).toBeInTheDocument();
+  });
+
+  it('handles emergency evacuation trigger and cancel states', () => {
+    render(<DashboardPage />);
+
+    expect(screen.getByText(/Emergency Management Console/i)).toBeInTheDocument();
+    const triggerBtn = screen.getByRole('button', { name: /Trigger Evacuation/i });
+    expect(triggerBtn).toBeInTheDocument();
+
+    // Show confirm dialog
+    act(() => {
+      triggerBtn.click();
+    });
+
+    const confirmBtn = screen.getByRole('button', { name: /Confirm Evac/i });
+    expect(confirmBtn).toBeInTheDocument();
+
+    // Activate evacuation
+    act(() => {
+      confirmBtn.click();
+    });
+
+    expect(screen.getByText(/EMERGENCY EVACUATION ACTIVE/i)).toBeInTheDocument();
+    expect(screen.getByText(/Clearance Status/i)).toBeInTheDocument();
+
+    // Abort evacuation
+    const abortBtn = screen.getByRole('button', { name: /Abort Evacuation/i });
+    expect(abortBtn).toBeInTheDocument();
+
+    act(() => {
+      abortBtn.click();
+    });
+
+    expect(screen.getByText(/Emergency Management Console/i)).toBeInTheDocument();
+  });
 });

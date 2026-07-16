@@ -37,4 +37,6 @@ export interface SimulationState {
   events: SimulationEvent[];
   tick: number;
   lastUpdated: string;
+  isEvacuationActive?: boolean;
+  initialEvacuationCrowd?: number;
 }

@@ -81,6 +81,8 @@ function createInitialState(): SimulationState {
     ],
     tick: 0,
     lastUpdated: timestamp,
+    isEvacuationActive: false,
+    initialEvacuationCrowd: 0,
   };
 }
 
@@ -330,7 +332,7 @@ export function disconnectWebSocket() {
 export function updateSimulation(): SimulationState {
   const nextTick = currentState.tick + 1;
   const timestamp = getSimulationTimestamp(nextTick);
-  const nextLocalZones = simulateNextCrowdZones(currentState.zones, nextTick);
+  const nextLocalZones = simulateNextCrowdZones(currentState.zones, nextTick, currentState.isEvacuationActive);
 
   // Synchronous tick update (client-side prediction local baseline)
   const nextAssessments = assessCrowdRisks(nextLocalZones, timestamp);
@@ -349,6 +351,8 @@ export function updateSimulation(): SimulationState {
     events: [...nextEvents, ...currentState.events].slice(0, MAX_EVENTS),
     tick: nextTick,
     lastUpdated: timestamp,
+    isEvacuationActive: currentState.isEvacuationActive,
+    initialEvacuationCrowd: currentState.initialEvacuationCrowd,
   };
 
   emitChange();
@@ -580,4 +584,30 @@ export function getSimIdFromUuid(uuid: string): string {
 
 export function getUuidFromSimId(simId: string): string {
   return ZONE_MAP[simId] || '';
+}
+
+export function triggerEvacuation() {
+  const totalCrowd = currentState.zones.reduce((sum, z) => {
+    if (z.type === 'concourse') {
+      return sum + Math.round((z.density * (z.capacity || 5000)) / 100);
+    } else {
+      return sum + (z.queueLength || 0);
+    }
+  }, 0);
+
+  currentState = {
+    ...currentState,
+    isEvacuationActive: true,
+    initialEvacuationCrowd: totalCrowd || 1000,
+  };
+  emitChange();
+}
+
+export function cancelEvacuation() {
+  currentState = {
+    ...currentState,
+    isEvacuationActive: false,
+    initialEvacuationCrowd: 0,
+  };
+  emitChange();
 }

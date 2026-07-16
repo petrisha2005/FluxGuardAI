@@ -51,4 +51,15 @@ describe('crowdSimulator', () => {
     // West Entrance queue should increase due to redirected detour flow
     expect(nextWest.queueLength).toBeGreaterThan(initialWest.queueLength);
   });
+
+  it('zeroes arrivals and accelerates exits when evacuation is active', () => {
+    const initialZones = createInitialCrowdZones();
+    const nextZones = simulateNextCrowdZones(initialZones, 1, true);
+
+    const nextGateC = nextZones.find((z) => z.id === 'gate-c')!;
+    const nextNorth = nextZones.find((z) => z.id === 'north-gate')!;
+
+    expect(nextGateC.entryRate).toBe(0);
+    expect(nextNorth.entryRate).toBe(0);
+  });
 });

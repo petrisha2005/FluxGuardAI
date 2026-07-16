@@ -12,6 +12,8 @@ import { DashboardHeader } from './components/DashboardHeader';
 import { RiskOverview } from './components/RiskOverview';
 import { FlowVisualizer } from './components/FlowVisualizer';
 import { CctvFeedGrid } from './components/CctvFeedGrid';
+import { CrowdRoutingPanel } from './components/CrowdRoutingPanel';
+import { EvacuationControlPanel } from './components/EvacuationControlPanel';
 import type {
   DashboardSummary,
   StadiumZone,
@@ -183,6 +185,8 @@ export function DashboardPage() {
     <div className="space-y-6">
       <DashboardHeader />
       <RiskOverview summary={dashboardState.summary} />
+      <CrowdRoutingPanel />
+      <EvacuationControlPanel />
       
       {/* Tab select controller */}
       <div className="border-b border-white/10 flex gap-6 pb-px">

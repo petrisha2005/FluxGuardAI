@@ -9,6 +9,8 @@ from app.schemas.event import EventResponse
 from app.schemas.zone import ZoneResponse
 from app.schemas.zone_link import ZoneLinkResponse
 from app.schemas.camera import CameraResponse
+from app.schemas.routing import RoutingRecommendationResponse
+from app.services.routing import generate_routing_recommendations
 
 router = APIRouter(
     prefix="/events",
@@ -93,3 +95,21 @@ def get_event_cameras(eventId: UUID):
         )
     cameras = database.get_cameras_for_event(eventId)
     return StandardResponse(data=[CameraResponse(**c) for c in cameras])
+
+
+@router.get("/{eventId}/routing-recommendations", response_model=StandardResponse)
+def get_event_routing_recommendations(eventId: UUID):
+    """Fetch AI-generated routing/detour recommendations for an event."""
+    event = database.get_event_by_id(eventId)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": {
+                    "code": "EVENT_NOT_FOUND",
+                    "message": f"Event with ID {eventId} not found.",
+                }
+            },
+        )
+    recommendations = generate_routing_recommendations(eventId)
+    return StandardResponse(data=[RoutingRecommendationResponse(**r) for r in recommendations])
