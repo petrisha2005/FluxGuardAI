@@ -1,0 +1,186 @@
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.core import database
+from app.core.security import require_roles
+from app.core.websocket import manager
+from app.schemas.base import StandardResponse
+from app.schemas.guidance import GuidanceGenerateRequest, GuidanceResponse
+from app.services import guidance
+
+router = APIRouter(
+    prefix="/events/{eventId}/guidance",
+    tags=["guidance"],
+    dependencies=[Depends(require_roles(["operator", "organizer"]))],
+)
+
+
+@router.post("/generate", response_model=StandardResponse, status_code=status.HTTP_201_CREATED)
+async def generate_guidance(eventId: UUID, payload: GuidanceGenerateRequest):
+    """Generate role-specific guidance for a safety alert."""
+    event = database.get_event_by_id(eventId)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": {
+                    "code": "EVENT_NOT_FOUND",
+                    "message": f"Event with ID {eventId} not found.",
+                }
+            },
+        )
+
+    # Check alert existence
+    alert = database.get_alert_by_id(payload.alert_id)
+    if not alert:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": {
+                    "code": "ALERT_NOT_FOUND",
+                    "message": f"Alert with ID {payload.alert_id} not found.",
+                }
+            },
+        )
+
+    try:
+        record = guidance.generate_guidance_for_alert(
+            alert_id=payload.alert_id,
+            audience_role=payload.audience_role,
+            language=payload.language,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": {
+                    "code": "GENERATION_ERROR",
+                    "message": f"Could not generate guidance: {str(e)}",
+                }
+            },
+        ) from e
+
+    response_obj = GuidanceResponse(**record)
+
+    # Broadcast guidance update
+    await manager.broadcast_to_event(
+        str(eventId),
+        "guidance_created",
+        response_obj.model_dump(by_alias=True, mode="json"),
+    )
+
+    return StandardResponse(data=response_obj)
+
+
+@router.post("/{guidanceId}/approve", response_model=StandardResponse)
+async def approve_guidance(eventId: UUID, guidanceId: UUID):
+    """Approve a pending safety directive for active broadcast."""
+    guidance_record = database.get_guidance_by_id(guidanceId)
+    if not guidance_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": {
+                    "code": "GUIDANCE_NOT_FOUND",
+                    "message": f"Guidance message with ID {guidanceId} not found.",
+                }
+            },
+        )
+
+    updated = database.update_guidance_status(guidanceId, "APPROVED")
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": {
+                    "code": "UPDATE_FAILED",
+                    "message": "Failed to update guidance approval status.",
+                }
+            },
+        )
+
+    # Log the intervention
+    alert_id = guidance_record.get("alert_id")
+    zone_id = None
+    if alert_id:
+        alert = database.get_alert_by_id(alert_id)
+        if alert:
+            zone_id = alert.get("zone_id")
+    if not zone_id:
+        zone_id = UUID("00000000-0000-0000-0000-000000000001")
+
+    database.log_intervention_action(
+        eventId,
+        zone_id,
+        "GUIDANCE",
+        f"Approved safety directive: {guidance_record.get('headline', 'Crowd Guidance Broadcast')}",
+    )
+
+    response_obj = GuidanceResponse(**updated)
+
+    await manager.broadcast_to_event(
+        str(eventId),
+        "guidance_approved",
+        response_obj.model_dump(by_alias=True, mode="json"),
+    )
+
+    return StandardResponse(data=response_obj)
+
+
+@router.post("/{guidanceId}/reject", response_model=StandardResponse)
+async def reject_guidance(eventId: UUID, guidanceId: UUID):
+    """Reject and archive a safety directive."""
+    guidance_record = database.get_guidance_by_id(guidanceId)
+    if not guidance_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": {
+                    "code": "GUIDANCE_NOT_FOUND",
+                    "message": f"Guidance message with ID {guidanceId} not found.",
+                }
+            },
+        )
+
+    updated = database.update_guidance_status(guidanceId, "REJECTED")
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": {
+                    "code": "UPDATE_FAILED",
+                    "message": "Failed to update guidance status.",
+                }
+            },
+        )
+
+    response_obj = GuidanceResponse(**updated)
+
+    await manager.broadcast_to_event(
+        str(eventId),
+        "guidance_rejected",
+        response_obj.model_dump(by_alias=True, mode="json"),
+    )
+
+    return StandardResponse(data=response_obj)
+
+
+@router.get("/active", response_model=StandardResponse)
+async def get_active_approved_guidance(eventId: UUID):
+    """Retrieve all active approved safety directives for signage boards."""
+    event = database.get_event_by_id(eventId)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": {
+                    "code": "EVENT_NOT_FOUND",
+                    "message": f"Event with ID {eventId} not found.",
+                }
+            },
+        )
+
+    records = database.get_active_approved_guidance(eventId)
+    response_list = [GuidanceResponse(**r) for r in records]
+    return StandardResponse(data=response_list)

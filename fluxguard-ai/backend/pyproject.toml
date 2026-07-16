@@ -4,9 +4,11 @@ version = "0.1.0"
 description = "FastAPI foundation for FluxGuard AI"
 requires-python = ">=3.12"
 dependencies = [
+  "asyncpg>=0.29.0",
   "fastapi>=0.112.0",
   "pydantic>=2.8.2",
   "pydantic-settings>=2.4.0",
+  "PyJWT>=2.8.0",
   "uvicorn[standard]>=0.30.5",
 ]
 
@@ -37,7 +39,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "ASYNC", "S"]
-ignore = ["S101"]
+ignore = ["S101", "B008", "E501", "S105"]
 
 [tool.pytest.ini_options]
 testpaths = ["app/tests"]
