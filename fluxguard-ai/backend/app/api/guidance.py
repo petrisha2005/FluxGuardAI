@@ -114,7 +114,7 @@ async def approve_guidance(eventId: UUID, guidanceId: UUID):
         eventId,
         zone_id,
         "GUIDANCE",
-        f"Approved safety directive: {guidance_record.get('headline', 'Crowd Guidance Broadcast')}"
+        f"Approved safety directive: {guidance_record.get('headline', 'Crowd Guidance Broadcast')}",
     )
 
     response_obj = GuidanceResponse(**updated)

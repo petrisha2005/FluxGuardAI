@@ -31,7 +31,7 @@ def setup_mock_staffing():
             "drivers": ["high density"],
             "prediction_horizon_minutes": 20,
             "generated_at": datetime.now(UTC),
-        }
+        },
     )
 
 

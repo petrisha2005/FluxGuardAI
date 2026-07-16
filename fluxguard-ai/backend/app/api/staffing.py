@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-from app.core.security import require_roles
 from app.core import database
-from app.schemas.base import StandardResponse
+from app.core.security import require_roles
 from app.core.websocket import manager
+from app.schemas.base import StandardResponse
 
 router = APIRouter(
     prefix="/events/{eventId}/staffing",
@@ -58,9 +58,7 @@ async def get_staffing_status(eventId: UUID):
     zones = database.get_zones_for_event(eventId)
     if not zones:
         return StandardResponse(
-            data=StaffingStatusResponse(
-                current_staff={}, recommended_staff={}, suggestions=[]
-            )
+            data=StaffingStatusResponse(current_staff={}, recommended_staff={}, suggestions=[])
         )
 
     risk_scores = database.get_latest_risk_scores(eventId)
@@ -187,7 +185,7 @@ async def redeploy_staff(eventId: UUID, request_payload: RedeploymentRequest):
         eventId,
         request_payload.to_zone_id,
         "STAFF",
-        f"Redeployed {request_payload.count} stewards to assist with congestion."
+        f"Redeployed {request_payload.count} stewards to assist with congestion.",
     )
 
     updated_staff = database.get_zone_staffing(eventId)

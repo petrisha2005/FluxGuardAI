@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-from app.core.security import require_roles
 from app.core import database
-from app.schemas.base import StandardResponse
+from app.core.security import require_roles
 from app.core.websocket import manager
+from app.schemas.base import StandardResponse
 
 router = APIRouter(
     prefix="/events/{eventId}/incidents",
@@ -178,7 +178,7 @@ async def resolve_incident(eventId: UUID, incidentId: UUID):
         eventId,
         updated["zone_id"],
         "INCIDENT",
-        f"Resolved {updated['type'].lower()} incident ticket: {updated.get('description', '')}"
+        f"Resolved {updated['type'].lower()} incident ticket: {updated.get('description', '')}",
     )
 
     response_obj = IncidentResponse(**updated)

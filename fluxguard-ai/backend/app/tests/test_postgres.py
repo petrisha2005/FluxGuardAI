@@ -32,5 +32,6 @@ def test_database_connection_failure_fallback() -> None:
 
         # Verify queries still succeed by falling back to in-memory store
         events = database.get_all_events()
-        assert len(events) == 1
-        assert events[0]["name"] == "FIFA World Cup 2026 - Opening Match"
+        assert len(events) == 3
+        event = next(e for e in events if str(e["id"]) == "e0000000-0000-0000-0000-000000000000")
+        assert event["name"] == "FIFA World Cup 2026 - Opening Match"

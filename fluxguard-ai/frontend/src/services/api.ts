@@ -8,7 +8,22 @@ export interface BackendEvent {
   status: string;
   startsAt: string;
   endsAt: string;
+  venueId?: string;
 }
+
+export interface BackendVenue {
+  id: string;
+  name: string;
+  city: string;
+  country: string;
+  timezone: string;
+  metadata: {
+    latitude?: number;
+    longitude?: number;
+    [key: string]: any;
+  };
+}
+
 
 export interface BackendZone {
   id: string;
@@ -127,6 +142,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  fetchVenues: () => request<BackendVenue[]>('/api/v1/venues'),
+
+  fetchEventsByVenue: (venueId: string) => request<BackendEvent[]>(`/api/v1/venues/${venueId}/events`),
+
   fetchEvents: () => request<BackendEvent[]>('/api/v1/events'),
 
   fetchZones: (eventId: string) => request<BackendZone[]>(`/api/v1/events/${eventId}/zones`),

@@ -1,10 +1,8 @@
-import pytest
 from uuid import uuid4
-from fastapi import status
+
 from fastapi.testclient import TestClient
 
-from app.core import database
-from app.core.security import get_current_user, User
+from app.core.security import User, get_current_user
 from app.main import app
 
 SEED_EVENT_ID = "e0000000-0000-0000-0000-000000000000"

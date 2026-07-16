@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
-from app.core.security import require_roles
 from app.core import database
+from app.core.security import require_roles
 from app.schemas.base import StandardResponse
 
 router = APIRouter(

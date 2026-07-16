@@ -10,6 +10,7 @@ import { OperationsPage } from '@/features/operations/OperationsPage';
 import { SignagePage } from '@/features/signage/SignagePage';
 import { VolunteerPage } from '@/features/volunteer/VolunteerPage';
 import { LandingPage } from '@/features/landing/LandingPage';
+import { CityHubPage } from '@/features/city/CityHubPage';
 
 describe('AnalyticsPage', () => {
   beforeEach(() => {
@@ -109,9 +110,28 @@ describe('LandingPage', () => {
     );
 
     expect(screen.getByRole('heading', { name: /FluxGuard AI/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Enter Command Center/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Steward Volunteer Mode/i })).toBeInTheDocument();
-    expect(screen.getByText(/Predictive Forecasts/i)).toBeInTheDocument();
-    expect(screen.getByText(/Resource Allocation/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Launch Command Center/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Steward Volunteer Console/i })).toBeInTheDocument();
+    expect(screen.getByText(/Predictive Modeling/i)).toBeInTheDocument();
+    expect(screen.getByText(/Steward Allocation/i)).toBeInTheDocument();
+  });
+});
+
+describe('CityHubPage', () => {
+  beforeEach(() => {
+    setupFetchMocks();
+    resetSimulation();
+  });
+
+  it('renders city command center widgets and maps', async () => {
+    render(
+      <MemoryRouter>
+        <CityHubPage />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: /City Command Center/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/Active Venues/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Geographic Operations Map/i)).toBeInTheDocument();
   });
 });

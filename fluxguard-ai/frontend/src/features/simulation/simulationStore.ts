@@ -18,7 +18,7 @@ import type {
 
 type Listener = () => void;
 
-const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
+let activeEventId = 'e0000000-0000-0000-0000-000000000000';
 const MAX_EVENTS = 12;
 const RISK_ORDER: Record<RiskLevel, number> = {
   LOW: 0,
@@ -27,19 +27,30 @@ const RISK_ORDER: Record<RiskLevel, number> = {
   CRITICAL: 3,
 };
 
-const ZONE_MAP: Record<string, string> = {
+let ZONE_MAP: Record<string, string> = {
   'north-gate': '00000000-0000-0000-0000-000000000001',
   'east-concourse': '00000000-0000-0000-0000-000000000002',
   'gate-c': '00000000-0000-0000-0000-000000000003',
   'west-entrance': '00000000-0000-0000-0000-000000000004',
 };
 
-const REV_ZONE_MAP: Record<string, string> = {
+let REV_ZONE_MAP: Record<string, string> = {
   '00000000-0000-0000-0000-000000000001': 'north-gate',
   '00000000-0000-0000-0000-000000000002': 'east-concourse',
   '00000000-0000-0000-0000-000000000003': 'gate-c',
   '00000000-0000-0000-0000-000000000004': 'west-entrance',
 };
+
+export function getActiveEventId(): string {
+  return activeEventId;
+}
+
+export function setActiveEventId(eventId: string) {
+  if (activeEventId !== eventId) {
+    initializeSimulationForEvent(eventId);
+  }
+}
+
 
 function formatTimestamp(timestamp: string): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -158,7 +169,7 @@ export function subscribe(listener: Listener): () => void {
 export function connectWebSocket() {
   if (activeSocket) return;
 
-  const wsUrl = api.getWebSocketUrl(EVENT_ID);
+  const wsUrl = api.getWebSocketUrl(activeEventId);
   const socket = new WebSocket(wsUrl);
 
   socket.onopen = () => {
@@ -350,7 +361,7 @@ export function updateSimulation(): SimulationState {
         nextLocalZones.map((zone) => {
           const zoneUuid = ZONE_MAP[zone.id];
           if (!zoneUuid) return Promise.resolve();
-          return api.postMeasurement(EVENT_ID, {
+          return api.postMeasurement(activeEventId, {
             zoneId: zoneUuid,
             measuredAt: timestamp,
             densityCount: zone.density,
@@ -363,13 +374,13 @@ export function updateSimulation(): SimulationState {
       );
 
       // Trigger predict calculations cycle on backend
-      await api.runPredictionsCycle(EVENT_ID);
+      await api.runPredictionsCycle(activeEventId);
 
       // If WebSocket is not connected or active, fall back to REST pulls to keep synced
       if (!activeSocket || activeSocket.readyState !== WebSocket.OPEN) {
         const [backendScores, backendAlerts] = await Promise.all([
-          api.fetchRiskScores(EVENT_ID),
-          api.fetchAlerts(EVENT_ID),
+          api.fetchRiskScores(activeEventId),
+          api.fetchAlerts(activeEventId),
         ]);
 
         let worstAlertGuidance: any = null;
@@ -383,7 +394,7 @@ export function updateSimulation(): SimulationState {
           const targetAlert = sortedAlerts[0];
           if (targetAlert.severity === 'critical' || targetAlert.severity === 'high') {
             try {
-              worstAlertGuidance = await api.generateGuidance(EVENT_ID, targetAlert.id, 'operator');
+              worstAlertGuidance = await api.generateGuidance(activeEventId, targetAlert.id, 'operator');
             } catch (e) {
               console.warn('AI Guidance generation failed:', e);
             }
@@ -486,6 +497,79 @@ export function resetSimulation(): SimulationState {
   return currentState;
 }
 
+export async function initializeSimulationForEvent(eventId: string) {
+  activeEventId = eventId;
+  disconnectWebSocket();
+
+  try {
+    const backendZones = await api.fetchZones(eventId);
+
+    const newZoneMap: Record<string, string> = {};
+    const newRevZoneMap: Record<string, string> = {};
+    const simulatorIds = ['north-gate', 'east-concourse', 'gate-c', 'west-entrance'];
+
+    const simulatorZones: CrowdZone[] = backendZones.map((bz, index) => {
+      const simId = simulatorIds[index] || bz.name.toLowerCase().replace(/\s+/g, '-');
+      newZoneMap[simId] = bz.id;
+      newRevZoneMap[bz.id] = simId;
+
+      const isGate = bz.type === 'gate';
+      return {
+        id: simId,
+        name: bz.name,
+        type: isGate ? 'gate' : 'concourse',
+        capacity: bz.capacity,
+        density: isGate ? 40 : 50,
+        entryRate: isGate ? 30 : 20,
+        exitRate: isGate ? 25 : 22,
+        queueLength: isGate ? 50 : 0,
+        risk: 'LOW',
+        lastUpdated: new Date().toISOString(),
+      };
+    });
+
+    ZONE_MAP = newZoneMap;
+    REV_ZONE_MAP = newRevZoneMap;
+
+    const timestamp = getSimulationTimestamp(0);
+    currentState = {
+      zones: simulatorZones,
+      riskAssessments: assessCrowdRisks(simulatorZones, timestamp),
+      events: [],
+      tick: 0,
+      lastUpdated: timestamp,
+    };
+
+    emitChange();
+    connectWebSocket();
+  } catch (error) {
+    console.error('Failed to initialize simulation for event:', error);
+  }
+}
+
+
 export function useSimulationState(): SimulationState {
   return useSyncExternalStore(subscribe, getState, getState);
+}
+
+export function setZoneStatus(zoneId: string, status: 'open' | 'closed') {
+  const zoneIndex = currentState.zones.findIndex(z => z.id === zoneId);
+  if (zoneIndex !== -1) {
+    currentState.zones[zoneIndex] = {
+      ...currentState.zones[zoneIndex],
+      status,
+    };
+    emitChange();
+  }
+}
+
+export function setZoneDetour(zoneId: string, detourTargetId: string | undefined) {
+  const zoneIndex = currentState.zones.findIndex(z => z.id === zoneId);
+  if (zoneIndex !== -1) {
+    currentState.zones[zoneIndex] = {
+      ...currentState.zones[zoneIndex],
+      detourTargetId,
+    };
+    emitChange();
+  }
 }

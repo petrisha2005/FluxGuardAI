@@ -1,6 +1,5 @@
 import logging
 import re
-from datetime import UTC, datetime
 from uuid import UUID
 
 from app.core import database
@@ -64,7 +63,10 @@ def generate_offline_response(query: str, zones: list[dict], alerts: list[dict])
             )
             return {
                 "response": response,
-                "suggested_actions": ["Dispatch staff to " + name, "Deploy digital signage reroute"],
+                "suggested_actions": [
+                    "Dispatch staff to " + name,
+                    "Deploy digital signage reroute",
+                ],
             }
 
     # 3. What happens if we do nothing?
@@ -76,7 +78,10 @@ def generate_offline_response(query: str, zones: list[dict], alerts: list[dict])
         )
         return {
             "response": response,
-            "suggested_actions": ["Trigger prediction updates", "Initiate precautionary staff alert"],
+            "suggested_actions": [
+                "Trigger prediction updates",
+                "Initiate precautionary staff alert",
+            ],
         }
 
     # 4. Safest evacuation route
@@ -94,7 +99,10 @@ def generate_offline_response(query: str, zones: list[dict], alerts: list[dict])
             )
             return {
                 "response": response,
-                "suggested_actions": ["Broadcast exit routes to volunteers", "Configure digital exit signs"],
+                "suggested_actions": [
+                    "Broadcast exit routes to volunteers",
+                    "Configure digital exit signs",
+                ],
             }
         else:
             return {
@@ -125,7 +133,11 @@ def generate_offline_response(query: str, zones: list[dict], alerts: list[dict])
     )
     return {
         "response": response,
-        "suggested_actions": ["Explain Gate C risk", "Find critical zones", "Safest evacuation route"],
+        "suggested_actions": [
+            "Explain Gate C risk",
+            "Find critical zones",
+            "Safest evacuation route",
+        ],
     }
 
 
@@ -182,7 +194,9 @@ async def resolve_copilot_query(event_id: UUID, query: str) -> dict:
                     if "response" in parsed and "suggested_actions" in parsed:
                         return parsed
             except Exception:
-                logger.warning("Failed to parse Gemini response as JSON. Falling back to plain text wraps.")
+                logger.warning(
+                    "Failed to parse Gemini response as JSON. Falling back to plain text wraps."
+                )
 
             return {
                 "response": text,

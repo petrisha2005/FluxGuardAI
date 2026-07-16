@@ -6,7 +6,6 @@ from uuid import UUID, uuid4
 
 from app.core import database
 
-
 TRANSLATIONS = {
     "es": {
         "Congestion Alert: {zone_name}": "Alerta de congestión: {zone_name}",
@@ -139,7 +138,7 @@ TRANSLATIONS = {
         "Monitor Zone Flow": "Zonenfluss überwachen",
         "Observe crowd density at {zone_name}": "Beobachten Sie die Menschendichte bei {zone_name}",
         "Report backlogs to control room": "Rückstände an den Kontrollraum melden",
-    }
+    },
 }
 
 

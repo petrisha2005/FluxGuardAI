@@ -15,7 +15,35 @@ logger = logging.getLogger("fluxguard.database")
 # Mock database tables using thread-safe structures for local offline fallback
 _lock = threading.Lock()
 
-# Seed Event
+# Seed Venues
+_venues = {
+    UUID("b0000000-0000-0000-0000-000000000000"): {
+        "id": UUID("b0000000-0000-0000-0000-000000000000"),
+        "name": "Lucusa Stadium",
+        "city": "Lucusa",
+        "country": "Lusaka",
+        "timezone": "UTC",
+        "metadata": {"latitude": -15.4167, "longitude": 28.2833},
+    },
+    UUID("b0000000-0000-0000-0000-000000000001"): {
+        "id": UUID("b0000000-0000-0000-0000-000000000001"),
+        "name": "City Arena",
+        "city": "Lucusa",
+        "country": "Lusaka",
+        "timezone": "UTC",
+        "metadata": {"latitude": -15.4300, "longitude": 28.3100},
+    },
+    UUID("b0000000-0000-0000-0000-000000000002"): {
+        "id": UUID("b0000000-0000-0000-0000-000000000002"),
+        "name": "Downtown Fan Zone",
+        "city": "Lucusa",
+        "country": "Lusaka",
+        "timezone": "UTC",
+        "metadata": {"latitude": -15.4050, "longitude": 28.2700},
+    },
+}
+
+# Seed Events mapped to Venues
 _events = {
     UUID("e0000000-0000-0000-0000-000000000000"): {
         "id": UUID("e0000000-0000-0000-0000-000000000000"),
@@ -24,11 +52,31 @@ _events = {
         "status": "active",
         "starts_at": datetime(2026, 6, 11, 18, 0, 0),
         "ends_at": datetime(2026, 6, 11, 22, 0, 0),
-    }
+        "venue_id": UUID("b0000000-0000-0000-0000-000000000000"),
+    },
+    UUID("e0000000-0000-0000-0000-000000000001"): {
+        "id": UUID("e0000000-0000-0000-0000-000000000001"),
+        "name": "FIFA World Cup 2026 - Group B Match",
+        "description": "Group Stage B match",
+        "status": "active",
+        "starts_at": datetime(2026, 6, 12, 15, 0, 0),
+        "ends_at": datetime(2026, 6, 12, 19, 0, 0),
+        "venue_id": UUID("b0000000-0000-0000-0000-000000000001"),
+    },
+    UUID("e0000000-0000-0000-0000-000000000002"): {
+        "id": UUID("e0000000-0000-0000-0000-000000000002"),
+        "name": "World Cup City Live Watch Party",
+        "description": "Downtown watch party under the stars",
+        "status": "active",
+        "starts_at": datetime(2026, 6, 12, 18, 0, 0),
+        "ends_at": datetime(2026, 6, 12, 23, 0, 0),
+        "venue_id": UUID("b0000000-0000-0000-0000-000000000002"),
+    },
 }
 
-# Seed Zones mapped to the Event ID
+# Seed Zones mapped to the Event IDs
 _zones = {
+    # Lucusa Stadium Zones
     UUID("00000000-0000-0000-0000-000000000001"): {
         "id": UUID("00000000-0000-0000-0000-000000000001"),
         "event_id": UUID("e0000000-0000-0000-0000-000000000000"),
@@ -65,6 +113,62 @@ _zones = {
         "parent_zone_id": None,
         "status": "open",
     },
+    # City Arena Zones
+    UUID("00000000-0000-0000-0000-000000000005"): {
+        "id": UUID("00000000-0000-0000-0000-000000000005"),
+        "event_id": UUID("e0000000-0000-0000-0000-000000000001"),
+        "name": "Main Entry Gate",
+        "type": "gate",
+        "capacity": 3000,
+        "parent_zone_id": None,
+        "status": "open",
+    },
+    UUID("00000000-0000-0000-0000-000000000006"): {
+        "id": UUID("00000000-0000-0000-0000-000000000006"),
+        "event_id": UUID("e0000000-0000-0000-0000-000000000001"),
+        "name": "South Concourse",
+        "type": "concourse",
+        "capacity": 4000,
+        "parent_zone_id": None,
+        "status": "open",
+    },
+    UUID("00000000-0000-0000-0000-000000000007"): {
+        "id": UUID("00000000-0000-0000-0000-000000000007"),
+        "event_id": UUID("e0000000-0000-0000-0000-000000000001"),
+        "name": "North Gate Stand",
+        "type": "gate",
+        "capacity": 2500,
+        "parent_zone_id": None,
+        "status": "open",
+    },
+    # Downtown Fan Zone Zones
+    UUID("00000000-0000-0000-0000-000000000008"): {
+        "id": UUID("00000000-0000-0000-0000-000000000008"),
+        "event_id": UUID("e0000000-0000-0000-0000-000000000002"),
+        "name": "Screening Plaza",
+        "type": "concourse",
+        "capacity": 8000,
+        "parent_zone_id": None,
+        "status": "open",
+    },
+    UUID("00000000-0000-0000-0000-000000000009"): {
+        "id": UUID("00000000-0000-0000-0000-000000000009"),
+        "event_id": UUID("e0000000-0000-0000-0000-000000000002"),
+        "name": "Food & Beverage Court",
+        "type": "concourse",
+        "capacity": 3000,
+        "parent_zone_id": None,
+        "status": "open",
+    },
+    UUID("00000000-0000-0000-0000-000000000010"): {
+        "id": UUID("00000000-0000-0000-0000-000000000010"),
+        "event_id": UUID("e0000000-0000-0000-0000-000000000002"),
+        "name": "Transit Egress Gate",
+        "type": "gate",
+        "capacity": 5000,
+        "parent_zone_id": None,
+        "status": "open",
+    },
 }
 
 _measurements = []
@@ -80,6 +184,12 @@ _zone_staffing = {
     "00000000-0000-0000-0000-000000000002": 15,
     "00000000-0000-0000-0000-000000000003": 25,
     "00000000-0000-0000-0000-000000000004": 10,
+    "00000000-0000-0000-0000-000000000005": 25,
+    "00000000-0000-0000-0000-000000000006": 20,
+    "00000000-0000-0000-0000-000000000007": 25,
+    "00000000-0000-0000-0000-000000000008": 35,
+    "00000000-0000-0000-0000-000000000009": 15,
+    "00000000-0000-0000-0000-000000000010": 20,
 }
 
 
@@ -133,62 +243,103 @@ async def _seed_database_if_empty() -> None:
 
         count = await conn.fetchval("SELECT COUNT(*) FROM venues")
         if count == 0:
-            logger.info("Database is empty. Seeding initial event and zones...")
-            venue_id = UUID("v0000000-0000-0000-0000-000000000000")
-            await conn.execute(
-                "INSERT INTO venues (id, name, city, country, timezone) VALUES ($1, $2, $3, $4, $5)",
-                venue_id,
-                "Lucusa Stadium",
-                "Lucusa",
-                "Lusaka",
-                "UTC",
-            )
+            logger.info("Database is empty. Seeding initial events, venues, and zones...")
+            
+            # Seeding Venues
+            venues_to_seed = [
+                (
+                    UUID("b0000000-0000-0000-0000-000000000000"),
+                    "Lucusa Stadium",
+                    "Lucusa",
+                    "Lusaka",
+                    "UTC",
+                    json.dumps({"latitude": -15.4167, "longitude": 28.2833}),
+                ),
+                (
+                    UUID("b0000000-0000-0000-0000-000000000001"),
+                    "City Arena",
+                    "Lucusa",
+                    "Lusaka",
+                    "UTC",
+                    json.dumps({"latitude": -15.4300, "longitude": 28.3100}),
+                ),
+                (
+                    UUID("b0000000-0000-0000-0000-000000000002"),
+                    "Downtown Fan Zone",
+                    "Lucusa",
+                    "Lusaka",
+                    "UTC",
+                    json.dumps({"latitude": -15.4050, "longitude": 28.2700}),
+                ),
+            ]
+            for v_id, name, city, country, tz, metadata in venues_to_seed:
+                await conn.execute(
+                    "INSERT INTO venues (id, name, city, country, timezone, metadata_json) VALUES ($1, $2, $3, $4, $5, $6)",
+                    v_id,
+                    name,
+                    city,
+                    country,
+                    tz,
+                    metadata,
+                )
 
-            event_id = UUID("e0000000-0000-0000-0000-000000000000")
-            await conn.execute(
-                "INSERT INTO events (id, name, description, status, starts_at, ends_at, venue_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-                event_id,
-                "FIFA World Cup 2026 - Opening Match",
-                "Opening match at the stadium",
-                "active",
-                datetime(2026, 6, 11, 18, 0, 0),
-                datetime(2026, 6, 11, 22, 0, 0),
-                venue_id,
-            )
+            # Seeding Events
+            events_to_seed = [
+                (
+                    UUID("e0000000-0000-0000-0000-000000000000"),
+                    "FIFA World Cup 2026 - Opening Match",
+                    "Opening match at the stadium",
+                    "active",
+                    datetime(2026, 6, 11, 18, 0, 0),
+                    datetime(2026, 6, 11, 22, 0, 0),
+                    UUID("b0000000-0000-0000-0000-000000000000"),
+                ),
+                (
+                    UUID("e0000000-0000-0000-0000-000000000001"),
+                    "FIFA World Cup 2026 - Group B Match",
+                    "Group Stage B match",
+                    "active",
+                    datetime(2026, 6, 12, 15, 0, 0),
+                    datetime(2026, 6, 12, 19, 0, 0),
+                    UUID("b0000000-0000-0000-0000-000000000001"),
+                ),
+                (
+                    UUID("e0000000-0000-0000-0000-000000000002"),
+                    "World Cup City Live Watch Party",
+                    "Downtown watch party under the stars",
+                    "active",
+                    datetime(2026, 6, 12, 18, 0, 0),
+                    datetime(2026, 6, 12, 23, 0, 0),
+                    UUID("b0000000-0000-0000-0000-000000000002"),
+                ),
+            ]
+            for ev_id, name, desc, status, start, end, v_id in events_to_seed:
+                await conn.execute(
+                    "INSERT INTO events (id, name, description, status, starts_at, ends_at, venue_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+                    ev_id,
+                    name,
+                    desc,
+                    status,
+                    start,
+                    end,
+                    v_id,
+                )
 
+            # Seeding Zones
             zones_data = [
-                (
-                    UUID("00000000-0000-0000-0000-000000000001"),
-                    event_id,
-                    "North Gate",
-                    "gate",
-                    2000,
-                    "open",
-                ),
-                (
-                    UUID("00000000-0000-0000-0000-000000000002"),
-                    event_id,
-                    "East Concourse",
-                    "concourse",
-                    5000,
-                    "open",
-                ),
-                (
-                    UUID("00000000-0000-0000-0000-000000000003"),
-                    event_id,
-                    "Gate C",
-                    "gate",
-                    1500,
-                    "open",
-                ),
-                (
-                    UUID("00000000-0000-0000-0000-000000000004"),
-                    event_id,
-                    "West Entrance",
-                    "gate",
-                    1800,
-                    "open",
-                ),
+                # Lucusa Stadium
+                (UUID("00000000-0000-0000-0000-000000000001"), UUID("e0000000-0000-0000-0000-000000000000"), "North Gate", "gate", 2000, "open"),
+                (UUID("00000000-0000-0000-0000-000000000002"), UUID("e0000000-0000-0000-0000-000000000000"), "East Concourse", "concourse", 5000, "open"),
+                (UUID("00000000-0000-0000-0000-000000000003"), UUID("e0000000-0000-0000-0000-000000000000"), "Gate C", "gate", 1500, "open"),
+                (UUID("00000000-0000-0000-0000-000000000004"), UUID("e0000000-0000-0000-0000-000000000000"), "West Entrance", "gate", 1800, "open"),
+                # City Arena
+                (UUID("00000000-0000-0000-0000-000000000005"), UUID("e0000000-0000-0000-0000-000000000001"), "Main Entry Gate", "gate", 3000, "open"),
+                (UUID("00000000-0000-0000-0000-000000000006"), UUID("e0000000-0000-0000-0000-000000000001"), "South Concourse", "concourse", 4000, "open"),
+                (UUID("00000000-0000-0000-0000-000000000007"), UUID("e0000000-0000-0000-0000-000000000001"), "North Gate Stand", "gate", 2500, "open"),
+                # Downtown Fan Zone
+                (UUID("00000000-0000-0000-0000-000000000008"), UUID("e0000000-0000-0000-0000-000000000002"), "Screening Plaza", "concourse", 8000, "open"),
+                (UUID("00000000-0000-0000-0000-000000000009"), UUID("e0000000-0000-0000-0000-000000000002"), "Food & Beverage Court", "concourse", 3000, "open"),
+                (UUID("00000000-0000-0000-0000-000000000010"), UUID("e0000000-0000-0000-0000-000000000002"), "Transit Egress Gate", "gate", 5000, "open"),
             ]
             for z_id, ev_id, name, z_type, cap, status in zones_data:
                 await conn.execute(
@@ -245,7 +396,7 @@ async def _get_all_events() -> list[dict]:
         return []
     async with pool.acquire() as conn:
         rows = await conn.fetch(
-            "SELECT id, name, description, status, starts_at, ends_at FROM events"
+            "SELECT id, name, description, status, starts_at, ends_at, venue_id FROM events"
         )
         return [dict(row) for row in rows]
 
@@ -267,7 +418,7 @@ async def _get_event_by_id(event_id: UUID) -> dict | None:
         return None
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, name, description, status, starts_at, ends_at FROM events WHERE id = $1",
+            "SELECT id, name, description, status, starts_at, ends_at, venue_id FROM events WHERE id = $1",
             event_id,
         )
         return dict(row) if row else None
@@ -282,6 +433,84 @@ def get_event_by_id(event_id: UUID) -> dict | None:
             logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
     with _lock:
         return _events.get(event_id)
+
+
+# Venues
+async def _get_all_venues() -> list[dict]:
+    pool = get_db_pool()
+    if not pool:
+        return []
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT id, name, city, country, timezone, metadata_json FROM venues"
+        )
+        results = []
+        for row in rows:
+            d = dict(row)
+            d["metadata"] = json.loads(d.pop("metadata_json") or "{}")
+            results.append(d)
+        return results
+
+
+def get_all_venues() -> list[dict]:
+    pool = get_db_pool()
+    if pool:
+        try:
+            return run_async(_get_all_venues())
+        except Exception as e:
+            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
+    with _lock:
+        return list(_venues.values())
+
+
+async def _get_venue_by_id(venue_id: UUID) -> dict | None:
+    pool = get_db_pool()
+    if not pool:
+        return None
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id, name, city, country, timezone, metadata_json FROM venues WHERE id = $1",
+            venue_id,
+        )
+        if row:
+            d = dict(row)
+            d["metadata"] = json.loads(d.pop("metadata_json") or "{}")
+            return d
+        return None
+
+
+def get_venue_by_id(venue_id: UUID) -> dict | None:
+    pool = get_db_pool()
+    if pool:
+        try:
+            return run_async(_get_venue_by_id(venue_id))
+        except Exception as e:
+            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
+    with _lock:
+        return _venues.get(venue_id)
+
+
+async def _get_events_for_venue(venue_id: UUID) -> list[dict]:
+    pool = get_db_pool()
+    if not pool:
+        return []
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT id, name, description, status, starts_at, ends_at, venue_id FROM events WHERE venue_id = $1",
+            venue_id,
+        )
+        return [dict(row) for row in rows]
+
+
+def get_events_for_venue(venue_id: UUID) -> list[dict]:
+    pool = get_db_pool()
+    if pool:
+        try:
+            return run_async(_get_events_for_venue(venue_id))
+        except Exception as e:
+            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
+    with _lock:
+        return [e for e in _events.values() if e.get("venue_id") == venue_id]
 
 
 # Zones
@@ -999,12 +1228,14 @@ def clear_database() -> None:
         _incidents.clear()
         _interventions.clear()
         _zone_staffing.clear()
-        _zone_staffing.update({
-            "00000000-0000-0000-0000-000000000001": 20,
-            "00000000-0000-0000-0000-000000000002": 15,
-            "00000000-0000-0000-0000-000000000003": 25,
-            "00000000-0000-0000-0000-000000000004": 10,
-        })
+        _zone_staffing.update(
+            {
+                "00000000-0000-0000-0000-000000000001": 20,
+                "00000000-0000-0000-0000-000000000002": 15,
+                "00000000-0000-0000-0000-000000000003": 25,
+                "00000000-0000-0000-0000-000000000004": 10,
+            }
+        )
 
 
 def get_zone_staffing(event_id: UUID) -> dict[str, int]:
@@ -1028,10 +1259,7 @@ def get_incidents(event_id: UUID) -> list[dict]:
 
 
 def update_incident_status(
-    event_id: UUID,
-    incident_id: UUID,
-    status: str,
-    responder: str | None = None
+    event_id: UUID, incident_id: UUID, status: str, responder: str | None = None
 ) -> dict | None:
     with _lock:
         for i in _incidents:
@@ -1066,20 +1294,20 @@ def update_intervention(event_id: UUID, intervention_id: UUID, updates: dict) ->
 def log_intervention_action(event_id: UUID, zone_id: UUID, type_str: str, description: str) -> None:
     measurements = get_all_measurements()
     current_tick = len(measurements) // 4
-    
+
     zone_measurements = [m for m in measurements if m["zone_id"] == zone_id]
     latest_m = max(zone_measurements, key=lambda x: x["measured_at"]) if zone_measurements else None
-    
+
     zone = _zones.get(zone_id)
     capacity = zone["capacity"] if zone else 500
     density_percentage = 0
     if latest_m and capacity > 0:
         density_percentage = round((latest_m["density_count"] / capacity) * 100)
-        
+
     risk_scores = get_latest_risk_scores(event_id)
     latest_risk = next((s for s in risk_scores if s["zone_id"] == zone_id), None)
     pre_risk = latest_risk["severity"].upper() if latest_risk else "LOW"
-    
+
     intervention = {
         "id": uuid4(),
         "event_id": event_id,
@@ -1100,24 +1328,80 @@ def resolve_pending_interventions(event_id: UUID) -> None:
     with _lock:
         measurements = list(_measurements)
         current_tick = len(measurements) // 4
-        
+
         for i in _interventions:
             if i["event_id"] == event_id and i["post_density"] is None:
                 # Resolve after 2 ticks
                 if current_tick >= i["trigger_tick"] + 2:
                     zone_id = i["zone_id"]
                     zone_measurements = [m for m in measurements if m["zone_id"] == zone_id]
-                    latest_m = max(zone_measurements, key=lambda x: x["measured_at"]) if zone_measurements else None
-                    
+                    latest_m = (
+                        max(zone_measurements, key=lambda x: x["measured_at"])
+                        if zone_measurements
+                        else None
+                    )
+
                     zone = _zones.get(zone_id)
                     capacity = zone["capacity"] if zone else 500
                     density_percentage = 0
                     if latest_m and capacity > 0:
                         density_percentage = round((latest_m["density_count"] / capacity) * 100)
-                        
+
                     risk_scores = [score for zone_id, score in _risk_scores.items()]
                     latest_risk = next((s for s in risk_scores if s["zone_id"] == zone_id), None)
                     post_risk = latest_risk["severity"].upper() if latest_risk else "LOW"
-                    
+
                     i["post_density"] = density_percentage
                     i["post_risk"] = post_risk
+
+
+_zone_links = [
+    # Lucusa Stadium links
+    {
+        "source_id": UUID("00000000-0000-0000-0000-000000000001"),
+        "target_id": UUID("00000000-0000-0000-0000-000000000002"),
+        "capacity_flow": 80,
+    },
+    {
+        "source_id": UUID("00000000-0000-0000-0000-000000000003"),
+        "target_id": UUID("00000000-0000-0000-0000-000000000002"),
+        "capacity_flow": 60,
+    },
+    {
+        "source_id": UUID("00000000-0000-0000-0000-000000000004"),
+        "target_id": UUID("00000000-0000-0000-0000-000000000002"),
+        "capacity_flow": 70,
+    },
+    # City Arena links
+    {
+        "source_id": UUID("00000000-0000-0000-0000-000000000005"),
+        "target_id": UUID("00000000-0000-0000-0000-000000000006"),
+        "capacity_flow": 120,
+    },
+    {
+        "source_id": UUID("00000000-0000-0000-0000-000000000007"),
+        "target_id": UUID("00000000-0000-0000-0000-000000000006"),
+        "capacity_flow": 100,
+    },
+    # Downtown Fan Zone links
+    {
+        "source_id": UUID("00000000-0000-0000-0000-000000000010"),
+        "target_id": UUID("00000000-0000-0000-0000-000000000008"),
+        "capacity_flow": 150,
+    },
+    {
+        "source_id": UUID("00000000-0000-0000-0000-000000000008"),
+        "target_id": UUID("00000000-0000-0000-0000-000000000009"),
+        "capacity_flow": 140,
+    },
+]
+
+
+def get_zone_links(event_id: UUID) -> list[dict]:
+    with _lock:
+        event_zones = {z["id"] for z in _zones.values() if z["event_id"] == event_id}
+        return [
+            link
+            for link in _zone_links
+            if link["source_id"] in event_zones and link["target_id"] in event_zones
+        ]

@@ -11,6 +11,16 @@ export const mockBackendEvent = {
   endsAt: '2026-06-11T22:00:00Z',
 };
 
+export const mockBackendVenue = {
+  id: 'b0000000-0000-0000-0000-000000000000',
+  name: 'Lucusa Stadium',
+  city: 'Lucusa',
+  country: 'Lusaka',
+  timezone: 'UTC',
+  metadata: { latitude: -15.4167, longitude: 28.2833 },
+};
+
+
 export const mockBackendZones = [
   {
     id: '00000000-0000-0000-0000-000000000001',
@@ -133,6 +143,10 @@ export function setupFetchMocks() {
       !url.includes('/measurements') &&
       !url.includes('/integrations')
     ) {
+      responseData = { data: [mockBackendEvent] };
+    } else if (url.includes('/api/v1/venues') && !url.includes('/events')) {
+      responseData = { data: [mockBackendVenue] };
+    } else if (url.includes('/api/v1/venues') && url.includes('/events')) {
       responseData = { data: [mockBackendEvent] };
     } else if (url.includes('/zones')) {
       responseData = { data: mockBackendZones };

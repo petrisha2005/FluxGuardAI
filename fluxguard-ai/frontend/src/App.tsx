@@ -7,6 +7,7 @@ import { OperationsPage } from '@/features/operations/OperationsPage';
 import { SignagePage } from '@/features/signage/SignagePage';
 import { VolunteerPage } from '@/features/volunteer/VolunteerPage';
 import { LandingPage } from '@/features/landing/LandingPage';
+import { CityHubPage } from '@/features/city/CityHubPage';
 import { AppLayout } from '@/layouts/AppLayout';
 
 export function App() {
@@ -14,6 +15,7 @@ export function App() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route index element={<LandingPage />} />
+        <Route path="city-hub" element={<CityHubPage />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="copilot" element={<CopilotPage />} />

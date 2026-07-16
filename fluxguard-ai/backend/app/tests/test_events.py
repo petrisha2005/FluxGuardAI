@@ -17,9 +17,9 @@ async def test_list_events() -> None:
     json_data = response.json()
     assert "data" in json_data
     assert "meta" in json_data
-    assert len(json_data["data"]) == 1
-    assert json_data["data"][0]["name"] == "FIFA World Cup 2026 - Opening Match"
-    assert json_data["data"][0]["id"] == SEED_EVENT_ID
+    assert len(json_data["data"]) == 3
+    event = next(e for e in json_data["data"] if e["id"] == SEED_EVENT_ID)
+    assert event["name"] == "FIFA World Cup 2026 - Opening Match"
 
 
 @pytest.mark.asyncio
@@ -89,3 +89,19 @@ async def test_list_zones_event_not_found() -> None:
     assert "detail" in json_data
     assert "error" in json_data["detail"]
     assert json_data["detail"]["error"]["code"] == "EVENT_NOT_FOUND"
+
+
+@pytest.mark.asyncio
+async def test_get_event_zone_links() -> None:
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get(f"/api/v1/events/{SEED_EVENT_ID}/links")
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert "data" in json_data
+    assert len(json_data["data"]) == 3
+    link = json_data["data"][0]
+    assert "sourceId" in link
+    assert "targetId" in link
+    assert "capacityFlow" in link

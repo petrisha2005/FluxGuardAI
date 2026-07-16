@@ -15,6 +15,7 @@ class EventBase(BaseModel):
     status: str
     starts_at: datetime
     ends_at: datetime
+    venue_id: UUID | None = None
 
 
 class EventResponse(EventBase):

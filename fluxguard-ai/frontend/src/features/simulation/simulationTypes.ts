@@ -9,6 +9,9 @@ export interface CrowdZone {
   exitRate: number;
   risk: RiskLevel;
   lastUpdated: string;
+  capacity?: number;
+  status?: 'open' | 'closed';
+  detourTargetId?: string;
 }
 
 export interface RiskAssessment {

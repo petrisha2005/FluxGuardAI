@@ -69,9 +69,7 @@ def test_surge_anomaly_triggers_alert():
 
     # Check alerts in database
     alerts = database.get_alerts(event_id=SEED_EVENT_ID)
-    anomaly_alerts = [
-        a for a in alerts if a["title"].startswith("Sudden crowd surge anomaly")
-    ]
+    anomaly_alerts = [a for a in alerts if a["title"].startswith("Sudden crowd surge anomaly")]
 
     assert len(anomaly_alerts) == 1
     assert anomaly_alerts[0]["severity"] == "critical"

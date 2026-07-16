@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSimulationState } from '@/features/simulation/simulationStore';
 import type {
   CrowdZone,
@@ -9,6 +10,7 @@ import type {
 import { CrowdZonePanel } from './components/CrowdZonePanel';
 import { DashboardHeader } from './components/DashboardHeader';
 import { RiskOverview } from './components/RiskOverview';
+import { FlowVisualizer } from './components/FlowVisualizer';
 import type {
   DashboardSummary,
   StadiumZone,
@@ -174,12 +176,42 @@ function selectDashboardState(state: SimulationState) {
 export function DashboardPage() {
   const simulationState = useSimulationState();
   const dashboardState = selectDashboardState(simulationState);
+  const [activeTab, setActiveTab] = useState<'zones' | 'flow'>('zones');
 
   return (
     <div className="space-y-6">
       <DashboardHeader />
       <RiskOverview summary={dashboardState.summary} />
-      <CrowdZonePanel zones={dashboardState.zones} />
+      
+      {/* Tab select controller */}
+      <div className="border-b border-white/10 flex gap-6 pb-px">
+        <button
+          onClick={() => setActiveTab('zones')}
+          className={`pb-2.5 text-sm font-semibold border-b-2 transition-all duration-200 ${
+            activeTab === 'zones'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-ink-muted hover:text-ink'
+          }`}
+        >
+          Zone Performance Details
+        </button>
+        <button
+          onClick={() => setActiveTab('flow')}
+          className={`pb-2.5 text-sm font-semibold border-b-2 transition-all duration-200 ${
+            activeTab === 'flow'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-ink-muted hover:text-ink'
+          }`}
+        >
+          Digital Twin Flow Visualizer
+        </button>
+      </div>
+
+      {activeTab === 'zones' ? (
+        <CrowdZonePanel zones={dashboardState.zones} />
+      ) : (
+        <FlowVisualizer />
+      )}
     </div>
   );
 }
