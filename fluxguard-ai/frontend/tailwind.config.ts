@@ -6,10 +6,10 @@ export default {
     extend: {
       colors: {
         surface: {
-          DEFAULT: '#07111f',
-          elevated: '#0d1b2e',
-          panel: '#101f35',
-          muted: '#17263d',
+          DEFAULT: '#090e16',
+          elevated: '#111827',
+          panel: '#161f30',
+          muted: '#1f293d',
         },
         ink: {
           DEFAULT: '#f8fafc',

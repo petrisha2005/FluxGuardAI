@@ -31,21 +31,24 @@ export function PredictionTimeline({ predictions }: PredictionTimelineProps) {
         <div className="h-72" role="img" aria-label="Current density and forecast timeline chart">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={predictions} margin={{ top: 8, right: 18, bottom: 8, left: 0 }}>
-              <CartesianGrid stroke="rgba(148, 163, 184, 0.16)" vertical={false} />
-              <XAxis dataKey="label" stroke="#a7b4c8" tickLine={false} axisLine={false} />
+              <CartesianGrid stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
+              <XAxis dataKey="label" stroke="#64748b" tickLine={false} axisLine={false} className="text-[10px] font-mono" />
               <YAxis
-                stroke="#a7b4c8"
+                stroke="#64748b"
                 tickLine={false}
                 axisLine={false}
                 domain={[0, 100]}
                 tickFormatter={(value: number) => `${value}%`}
+                className="text-[10px] font-mono"
               />
               <Tooltip
                 contentStyle={{
-                  background: '#0d1b2e',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: '8px',
-                  color: '#f8fafc',
+                  background: '#111827',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: '4px',
+                  color: '#f1f5f9',
+                  fontFamily: 'monospace',
+                  fontSize: '11px',
                 }}
                 formatter={(value: number | string, name: string) => [`${value}%`, name]}
               />
@@ -54,7 +57,7 @@ export function PredictionTimeline({ predictions }: PredictionTimelineProps) {
                 type="monotone"
                 dataKey="confidenceLow"
                 name="95% CI Lower Bound"
-                stroke="#818cf8"
+                stroke="#64748b"
                 strokeWidth={1.5}
                 strokeDasharray="4 4"
                 dot={false}
@@ -93,7 +96,7 @@ export function PredictionTimeline({ predictions }: PredictionTimelineProps) {
 
         {/* Explainability / Forecast Drivers Panel */}
         <div className="border-t border-white/5 pt-4 space-y-4">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+          <h4 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted font-mono">
             Model Explanation & Drivers
           </h4>
 

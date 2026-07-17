@@ -41,7 +41,7 @@ export function Navigation() {
   };
 
   return (
-    <header className="border-b border-white/10 bg-surface-elevated/80 backdrop-blur">
+    <header className="border-b border-white/5 bg-surface/85 backdrop-blur-md sticky top-0 z-40">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:shadow"
@@ -50,20 +50,21 @@ export function Navigation() {
       </a>
       <nav
         aria-label="Primary navigation"
-        className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8"
+        className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8"
       >
         <div className="flex items-center gap-6">
-          <NavLink to="/" className="text-lg font-semibold tracking-tight text-ink mr-2">
-            FluxGuard AI
+          <NavLink to="/" className="text-sm font-black tracking-widest text-ink mr-4 flex items-center gap-2 uppercase">
+            <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse" />
+            FluxGuard <span className="text-brand-primary font-mono text-[9px] bg-brand-primary/10 px-1.5 py-0.5 rounded tracking-normal">OPS</span>
           </NavLink>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
             <NavLink
               to="/city-hub"
               className={({ isActive }) =>
-                `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
+                `text-[11px] font-bold uppercase tracking-wider transition-all duration-200 hover:text-ink px-3 py-1.5 rounded-md ${
                   isActive
-                    ? 'text-brand-primary border-b-2 border-brand-primary pb-0.5 shadow-[0_4px_12px_rgb(56_189_248/0.1)]'
-                    : 'text-ink-muted'
+                    ? 'text-brand-primary bg-white/5 border border-white/5 shadow-[0_0_12px_rgba(56,189,248,0.05)]'
+                    : 'text-ink-subdued'
                 }`
               }
             >
@@ -72,10 +73,10 @@ export function Navigation() {
             <NavLink
               to="/dashboard"
               className={({ isActive }) =>
-                `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
+                `text-[11px] font-bold uppercase tracking-wider transition-all duration-200 hover:text-ink px-3 py-1.5 rounded-md ${
                   isActive
-                    ? 'text-brand-primary border-b-2 border-brand-primary pb-0.5 shadow-[0_4px_12px_rgb(56_189_248/0.1)]'
-                    : 'text-ink-muted'
+                    ? 'text-brand-primary bg-white/5 border border-white/5 shadow-[0_0_12px_rgba(56,189,248,0.05)]'
+                    : 'text-ink-subdued'
                 }`
               }
             >
@@ -84,10 +85,10 @@ export function Navigation() {
             <NavLink
               to="/analytics"
               className={({ isActive }) =>
-                `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
+                `text-[11px] font-bold uppercase tracking-wider transition-all duration-200 hover:text-ink px-3 py-1.5 rounded-md ${
                   isActive
-                    ? 'text-brand-primary border-b-2 border-brand-primary pb-0.5 shadow-[0_4px_12px_rgb(56_189_248/0.1)]'
-                    : 'text-ink-muted'
+                    ? 'text-brand-primary bg-white/5 border border-white/5 shadow-[0_0_12px_rgba(56,189,248,0.05)]'
+                    : 'text-ink-subdued'
                 }`
               }
             >
@@ -96,10 +97,10 @@ export function Navigation() {
             <NavLink
               to="/copilot"
               className={({ isActive }) =>
-                `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
+                `text-[11px] font-bold uppercase tracking-wider transition-all duration-200 hover:text-ink px-3 py-1.5 rounded-md ${
                   isActive
-                    ? 'text-brand-primary border-b-2 border-brand-primary pb-0.5 shadow-[0_4px_12px_rgb(56_189_248/0.1)]'
-                    : 'text-ink-muted'
+                    ? 'text-brand-primary bg-white/5 border border-white/5 shadow-[0_0_12px_rgba(56,189,248,0.05)]'
+                    : 'text-ink-subdued'
                 }`
               }
             >
@@ -108,10 +109,10 @@ export function Navigation() {
             <NavLink
               to="/operations"
               className={({ isActive }) =>
-                `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
+                `text-[11px] font-bold uppercase tracking-wider transition-all duration-200 hover:text-ink px-3 py-1.5 rounded-md ${
                   isActive
-                    ? 'text-brand-primary border-b-2 border-brand-primary pb-0.5 shadow-[0_4px_12px_rgb(56_189_248/0.1)]'
-                    : 'text-ink-muted'
+                    ? 'text-brand-primary bg-white/5 border border-white/5 shadow-[0_0_12px_rgba(56,189,248,0.05)]'
+                    : 'text-ink-subdued'
                 }`
               }
             >
@@ -120,10 +121,10 @@ export function Navigation() {
             <NavLink
               to="/signage"
               className={({ isActive }) =>
-                `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
+                `text-[11px] font-bold uppercase tracking-wider transition-all duration-200 hover:text-ink px-3 py-1.5 rounded-md ${
                   isActive
-                    ? 'text-brand-primary border-b-2 border-brand-primary pb-0.5 shadow-[0_4px_12px_rgb(56_189_248/0.1)]'
-                    : 'text-ink-muted'
+                    ? 'text-brand-primary bg-white/5 border border-white/5 shadow-[0_0_12px_rgba(56,189,248,0.05)]'
+                    : 'text-ink-subdued'
                 }`
               }
             >
@@ -132,10 +133,10 @@ export function Navigation() {
             <NavLink
               to="/volunteer"
               className={({ isActive }) =>
-                `text-sm font-semibold transition-all duration-250 hover:text-brand-primary ${
+                `text-[11px] font-bold uppercase tracking-wider transition-all duration-200 hover:text-ink px-3 py-1.5 rounded-md ${
                   isActive
-                    ? 'text-brand-primary border-b-2 border-brand-primary pb-0.5 shadow-[0_4px_12px_rgb(56_189_248/0.1)]'
-                    : 'text-ink-muted'
+                    ? 'text-brand-primary bg-white/5 border border-white/5 shadow-[0_0_12px_rgba(56,189,248,0.05)]'
+                    : 'text-ink-subdued'
                 }`
               }
             >
@@ -144,12 +145,12 @@ export function Navigation() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 border-l border-white/10 pl-4">
-          <span className="text-xs text-ink-muted hidden md:inline">Venue:</span>
+        <div className="flex items-center gap-2 border-l border-white/5 pl-4">
+          <span className="text-[10px] text-ink-subdued uppercase tracking-wider font-mono font-bold hidden md:inline">Venue Context:</span>
           <select
             value={selectedVenueId}
             onChange={(e) => handleVenueChange(e.target.value)}
-            className="bg-surface/80 border border-white/10 text-ink text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-primary backdrop-blur"
+            className="bg-surface-elevated border border-white/5 text-ink text-xs rounded-md px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-brand-primary"
           >
             {venues.map((v) => (
               <option key={v.id} value={v.id} className="bg-surface text-ink">

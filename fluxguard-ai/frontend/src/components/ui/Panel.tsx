@@ -11,17 +11,20 @@ export interface PanelProps extends HTMLAttributes<HTMLElement> {
 export function Panel({ children, className, eyebrow, title, ...props }: PanelProps) {
   return (
     <section
-      className={cn('rounded-command border border-white/10 bg-surface-elevated/80 p-6', className)}
+      className={cn(
+        'rounded-md border border-white/5 bg-surface-elevated p-5 transition-all duration-200 hover:border-white/10',
+        className
+      )}
       {...props}
     >
       {eyebrow || title ? (
-        <header className="mb-5">
+        <header className="mb-4 border-b border-white/5 pb-3">
           {eyebrow ? (
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand-secondary">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-brand-primary font-mono">
               {eyebrow}
             </p>
           ) : null}
-          {title ? <h2 className="mt-1 text-lg font-semibold text-ink">{title}</h2> : null}
+          {title ? <h2 className="text-xs font-bold uppercase tracking-wider text-ink font-mono mt-0.5">{title}</h2> : null}
         </header>
       ) : null}
       {children}
