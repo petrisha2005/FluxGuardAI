@@ -110,26 +110,93 @@ def generate_offline_response(query: str, zones: list[dict], alerts: list[dict])
                 "suggested_actions": [],
             }
 
-    # 5. Summarize last 10 minutes
-    if "summarize" in q or "10 minutes" in q or "summary" in q:
+    # 5. Summarize last 10 minutes or 15 minutes
+    if "summarize" in q or "minutes" in q or "summary" in q:
+        if "15" in q:
+            response = (
+                "Summary of the last 15 minutes: Evolving transit arrivals caused localized density surges at Gate C. "
+                "Overall stadium operations remain stable under proactive management postures."
+            )
+            return {
+                "response": response,
+                "suggested_actions": ["Review 15m timeline log", "Check gate flow stats"],
+            }
+        else:
+            response = (
+                "Summary of the last 10 minutes: Sensor metrics show steady entry volumes. "
+                "North Gate and Gate C exhibited transient crowd surges following transit train arrivals. "
+                "One high congestion alert was automatically logged for Gate C and acknowledged by operations."
+            )
+            return {
+                "response": response,
+                "suggested_actions": ["Download operational log pdf", "Review incident timeline"],
+            }
+
+    # 6. Staff deployed query
+    if "staff" in q or "deployed" in q:
         response = (
-            "Summary of the last 10 minutes: Sensor metrics show steady entry volumes. "
-            "North Gate and Gate C exhibited transient crowd surges following transit train arrivals. "
-            "One high congestion alert was automatically logged for Gate C and acknowledged by operations."
+            "Staff Deployment Audit: There are currently 42 active security stewards and medics deployed. "
+            "Distribution: 16 at North Gate, 12 at Gate C, 8 at East Concourse, and 6 at West Entrance. Staffing levels are adequate."
         )
         return {
             "response": response,
-            "suggested_actions": ["Download operational log pdf", "Review incident timeline"],
+            "suggested_actions": ["Reassign 4 staff to Gate C", "Print personnel layout"],
         }
 
-    # 6. Default helper response
+    # 7. Weather query
+    if "weather" in q or "rain" in q:
+        response = (
+            "Weather Forecast & Crowd Flow Impact: Current conditions are clear. "
+            "A shift to wet weather would decrease walk speeds by approximately 12% due to slippery surface hazard profiles."
+        )
+        return {
+            "response": response,
+            "suggested_actions": ["Enable rainy-day digital warnings", "Inspect walkway drain systems"],
+        }
+
+    # 8. Highest impact recommendation query
+    if "impact" in q or "highest impact" in q:
+        response = (
+            "Action Impact Analysis: Opening the Gate C Secondary Auxiliary Entrance has the highest projected impact, "
+            "alleviating queue lengths by approximately 28% within 8 minutes."
+        )
+        return {
+            "response": response,
+            "suggested_actions": ["Execute Gate C Secondary Open", "Compare alternate actions"],
+        }
+
+    # 9. Unresolved incidents query
+    if "unresolved" in q or "incidents" in q:
+        response = (
+            "Incident Queue Check: There is currently 1 active unresolved incident ticket: "
+            "Medical concern near East Concourse (Awaiting Medic Unit 1 check-in)."
+        )
+        return {
+            "response": response,
+            "suggested_actions": ["Dispatch medic unit 1", "Acknowledge queue warning"],
+        }
+
+    # 10. What changed recently query
+    if "changed" in q or "recent" in q:
+        response = (
+            "Recent Delta: Gate C crowd density grew by 14% over the last 10 minutes following the transit arrival wave. "
+            "1 medical concern was successfully resolved at North Gate."
+        )
+        return {
+            "response": response,
+            "suggested_actions": ["Compare to 30m ago", "View recent actions feed"],
+        }
+
+    # 11. Default helper response
     response = (
         "Hello! I am your FluxGuard AI Command Assistant. I monitor real-time crowd densities, ticketing rates, transit schedules, and weather conditions. "
         "Ask me queries like:\n"
         "- *'Why is Gate C high risk?'*\n"
         "- *'Which zone needs immediate attention?'*\n"
         "- *'What is the safest evacuation route?'*\n"
-        "- *'Summarize the last 10 minutes.'*"
+        "- *'Summarize the last 15 minutes.'*\n"
+        "- *'How will weather affect crowd flow?'*\n"
+        "- *'How many staff are currently deployed?'*"
     )
     return {
         "response": response,
