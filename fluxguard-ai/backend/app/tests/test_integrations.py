@@ -71,3 +71,33 @@ def test_predictions_incorporate_coefficients() -> None:
         assert p["modelVersion"] == "prophet-mvp-v1.0-enriched"
         assert "predictedDensity" in p
         assert 0 <= p["predictedDensity"] <= 100
+
+
+def test_weather_adapter_fallback_on_exception() -> None:
+    from unittest.mock import patch
+    with patch("app.services.adapters.weather.datetime") as mock_datetime:
+        mock_datetime.now.side_effect = RuntimeError("Weather API Timeout")
+        fallback_weather = get_current_weather()
+        assert fallback_weather["status"] == "clear"
+        assert fallback_weather["exit_rate_modifier"] == 1.0
+        assert "fallback" in fallback_weather["description"].lower()
+
+
+def test_transit_adapter_fallback_on_exception() -> None:
+    from unittest.mock import patch
+    with patch("app.services.adapters.transit.datetime") as mock_datetime:
+        mock_datetime.now.side_effect = Exception("Connection Refused")
+        fallback_transit = get_transit_status()
+        assert fallback_transit["status"] == "on_time"
+        assert fallback_transit["passenger_count"] == 0
+        assert "fallback" in fallback_transit["description"].lower()
+
+
+def test_ticketing_adapter_fallback_on_exception() -> None:
+    from unittest.mock import patch
+    with patch("app.services.adapters.ticket_scans.random") as mock_random:
+        mock_random.randint.side_effect = RuntimeError("Sensors Unreachable")
+        fallback_ticketing = get_ticket_scan_rates()
+        assert fallback_ticketing["total_scans_last_minute"] == 0
+        assert fallback_ticketing["active_turnstiles"] == 0
+        assert fallback_ticketing["average_scans_per_turnstile"] == 0.0

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Panel } from '@/components/ui';
 import { api, type BackendIncident } from '@/services/api';
+import {
+  getActiveEventId,
+  getUuidFromSimId,
+  useSimulationState,
+} from '@/features/simulation/simulationStore';
 
-const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
-
-const ZONE_LABELS: Record<string, string> = {
+const FALLBACK_ZONE_LABELS: Record<string, string> = {
   '00000000-0000-0000-0000-000000000001': 'North Gate',
   '00000000-0000-0000-0000-000000000002': 'East Concourse',
   '00000000-0000-0000-0000-000000000003': 'Gate C',
@@ -12,23 +15,16 @@ const ZONE_LABELS: Record<string, string> = {
 };
 
 interface VolunteerTask {
-  id: number;
+  id: string;
   text: string;
   completed: boolean;
+  priority?: boolean;
 }
 
-const DEFAULT_TASKS: VolunteerTask[] = [
-  { id: 1, text: 'Steward Post #4: Ensure exit lanes at North Gate are clear', completed: false },
-  {
-    id: 2,
-    text: 'Verify dynamically updated signage at East Concourse matches directives',
-    completed: false,
-  },
-  { id: 3, text: 'Standby at Gate C for active crowd redirection support', completed: false },
-  { id: 4, text: 'Perform turnstile entry sensor visual checks', completed: false },
-];
-
 export function VolunteerPage() {
+  const sim = useSimulationState();
+  const activeEventId = getActiveEventId();
+
   const [isOffline, setIsOffline] = useState(() => {
     if (typeof window !== 'undefined') {
       return !window.navigator.onLine;
@@ -46,9 +42,9 @@ export function VolunteerPage() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [tasks, setTasks] = useState<VolunteerTask[]>(() => {
-    const saved = localStorage.getItem('fluxguard-volunteer-tasks');
-    return saved ? JSON.parse(saved) : DEFAULT_TASKS;
+  const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('fluxguard-volunteer-completed-tasks');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
   });
 
   const [incidents, setIncidents] = useState<BackendIncident[]>(() => {
@@ -56,14 +52,32 @@ export function VolunteerPage() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Dynamic Zone Labels
+  const zoneLabels: Record<string, string> = {};
+  sim.zones.forEach((z) => {
+    const uuid = getUuidFromSimId(z.id);
+    if (uuid) {
+      zoneLabels[uuid] = z.name;
+    }
+  });
+  const finalZoneLabels = Object.keys(zoneLabels).length > 0 ? zoneLabels : FALLBACK_ZONE_LABELS;
+
   // Form State
   const [type, setType] = useState('MEDICAL');
-  const [zoneId, setZoneId] = useState('00000000-0000-0000-0000-000000000001');
+  const [zoneId, setZoneId] = useState('');
   const [severity, setSeverity] = useState('LOW');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSyncSuccess, setShowSyncSuccess] = useState(false);
   const [syncedCount, setSyncedCount] = useState(0);
+
+  // Set default zone ID in dropdown on load
+  useEffect(() => {
+    const keys = Object.keys(finalZoneLabels);
+    if (keys.length > 0 && !zoneId) {
+      setZoneId(keys[0]);
+    }
+  }, [finalZoneLabels, zoneId]);
 
   // Persistence hooks
   useEffect(() => {
@@ -71,8 +85,11 @@ export function VolunteerPage() {
   }, [offlineQueue]);
 
   useEffect(() => {
-    localStorage.setItem('fluxguard-volunteer-tasks', JSON.stringify(tasks));
-  }, [tasks]);
+    localStorage.setItem(
+      'fluxguard-volunteer-completed-tasks',
+      JSON.stringify(Array.from(completedTaskIds)),
+    );
+  }, [completedTaskIds]);
 
   // Sync Queue when transitioning from Offline to Online
   const syncQueue = async (currentQueue: typeof offlineQueue) => {
@@ -81,7 +98,13 @@ export function VolunteerPage() {
     let successCount = 0;
     for (const item of currentQueue) {
       try {
-        await api.createIncident(EVENT_ID, item.zoneId, item.type, item.severity, item.description);
+        await api.createIncident(
+          activeEventId,
+          item.zoneId,
+          item.type,
+          item.severity,
+          item.description,
+        );
         successCount++;
       } catch (err) {
         console.error('Failed to sync offline incident report', err);
@@ -93,14 +116,13 @@ export function VolunteerPage() {
     localStorage.removeItem('fluxguard-volunteer-queue');
     setIsSubmitting(false);
     setTimeout(() => setShowSyncSuccess(false), 5000);
-    // Reload incidents log
     loadIncidents(false);
   };
 
   const loadIncidents = async (silentOfflineCheck: boolean) => {
     if (isOffline || silentOfflineCheck) return;
     try {
-      const data = await api.fetchIncidents(EVENT_ID);
+      const data = await api.fetchIncidents(activeEventId);
       setIncidents(data);
       localStorage.setItem('fluxguard-volunteer-incidents', JSON.stringify(data));
     } catch (err) {
@@ -121,7 +143,6 @@ export function VolunteerPage() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Initial load
     loadIncidents(isOffline);
 
     return () => {
@@ -129,14 +150,12 @@ export function VolunteerPage() {
       window.removeEventListener('offline', handleOffline);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOffline]);
+  }, [isOffline, activeEventId]);
 
-  // Handle Manual Connection State Toggle
   const toggleOfflineState = () => {
     const nextState = !isOffline;
     setIsOffline(nextState);
     if (!nextState) {
-      // Transitioning to online -> sync
       syncQueue(offlineQueue);
     }
   };
@@ -153,13 +172,12 @@ export function VolunteerPage() {
     };
 
     if (isOffline) {
-      // Queue offline
       setOfflineQueue((prev) => [...prev, payload]);
       setDescription('');
     } else {
       setIsSubmitting(true);
       try {
-        await api.createIncident(EVENT_ID, zoneId, type, severity, description.trim());
+        await api.createIncident(activeEventId, zoneId, type, severity, description.trim());
         setDescription('');
         loadIncidents(false);
       } catch (err) {
@@ -170,13 +188,89 @@ export function VolunteerPage() {
     }
   };
 
-  const toggleTask = (taskId: number) => {
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, completed: !t.completed } : t)));
+  // Generate dynamic posture-driven volunteer tasks checklist
+  const dynamicTasks: VolunteerTask[] = [];
+
+  if (sim.isEvacuationActive) {
+    dynamicTasks.push({
+      id: 'evac-alert-1',
+      text: '🚨 EMERGENCY EVACUATION ACTIVE: Direct concourse crowds toward the nearest exits.',
+      completed: completedTaskIds.has('evac-alert-1'),
+      priority: true,
+    });
+    dynamicTasks.push({
+      id: 'evac-alert-2',
+      text: '🚨 Assist stewards at entry gates with turnstile override and safe clearance guides.',
+      completed: completedTaskIds.has('evac-alert-2'),
+      priority: true,
+    });
+    dynamicTasks.push({
+      id: 'evac-alert-3',
+      text: '🚨 Report any exit blockages or casualties directly to the command center.',
+      completed: completedTaskIds.has('evac-alert-3'),
+      priority: true,
+    });
+  } else {
+    // Detours Check
+    const closedDetourZone = sim.zones.find((z) => z.status === 'closed' && z.detourTargetId);
+    if (closedDetourZone) {
+      const targetZone = sim.zones.find((z) => z.id === closedDetourZone.detourTargetId);
+      const targetName = targetZone ? targetZone.name : 'detour gate';
+      dynamicTasks.push({
+        id: 'detour-task',
+        text: `⚡ REDIRECT FLOW: Assist crowd detouring from closed gate ${closedDetourZone.name} to ${targetName}.`,
+        completed: completedTaskIds.has('detour-task'),
+        priority: true,
+      });
+    }
+
+    // Congestion Check
+    const highDensityZone = sim.zones.find((z) => z.density > 75);
+    if (highDensityZone) {
+      dynamicTasks.push({
+        id: 'congestion-task',
+        text: `⚠️ CONGESTION CONTROL: Crowd density is at ${highDensityZone.density}% in ${highDensityZone.name}. Assist with traffic flow.`,
+        completed: completedTaskIds.has('congestion-task'),
+        priority: true,
+      });
+    }
+
+    // Default checklist tasks
+    const firstConcourse = sim.zones.find((z) => z.type === 'concourse') || { name: 'Concourse' };
+    const firstGate = sim.zones.find((z) => z.type === 'gate') || { name: 'Entrance' };
+
+    dynamicTasks.push({
+      id: 'default-1',
+      text: `Monitor turnstile entry speeds and queue lines at ${firstGate.name}.`,
+      completed: completedTaskIds.has('default-1'),
+    });
+    dynamicTasks.push({
+      id: 'default-2',
+      text: `Inspect dynamical LED display screens at ${firstConcourse.name} to verify guidance broadcasts.`,
+      completed: completedTaskIds.has('default-2'),
+    });
+    dynamicTasks.push({
+      id: 'default-3',
+      text: 'Standby for active crowd redirection prompts from AI Advisor.',
+      completed: completedTaskIds.has('default-3'),
+    });
+  }
+
+  const toggleTask = (taskId: string) => {
+    setCompletedTaskIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
   };
 
   return (
     <div className="space-y-6">
-      {/* Synchronization Banner Notification */}
+      {/* Sync Banner */}
       {showSyncSuccess && (
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-emerald-400 text-xs font-semibold flex items-center justify-between shadow-[0_4px_20px_rgba(16,185,129,0.1)] transition-all animate-bounce">
           <div className="flex items-center gap-2">
@@ -195,7 +289,7 @@ export function VolunteerPage() {
         </div>
       )}
 
-      {/* Network Status Header Panel */}
+      {/* Network Status Header */}
       <div className="rounded-2xl border border-white/10 bg-surface-elevated/40 backdrop-blur p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <h2 className="text-lg font-bold tracking-tight text-ink">Volunteer Command Dashboard</h2>
@@ -222,17 +316,18 @@ export function VolunteerPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Left Side: Duties & Checklist + Observations form */}
+        {/* Active Assignments */}
         <div className="space-y-6">
-          {/* Duties Checklist Panel */}
           <Panel eyebrow="Steward Duty roster" title="My Active Assignments">
             <div className="space-y-3.5">
-              {tasks.map((task) => (
+              {dynamicTasks.map((task) => (
                 <label
                   key={task.id}
-                  className={`flex items-start gap-3 rounded-lg border border-white/5 bg-slate-950/20 p-3.5 cursor-pointer transition-all hover:bg-white/[0.02] ${
-                    task.completed ? 'opacity-50' : ''
-                  }`}
+                  className={`flex items-start gap-3 rounded-lg border p-3.5 cursor-pointer transition-all hover:bg-white/[0.02] ${
+                    task.priority
+                      ? 'border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10'
+                      : 'border-white/5 bg-slate-950/20'
+                  } ${task.completed ? 'opacity-40' : ''}`}
                 >
                   <input
                     type="checkbox"
@@ -241,7 +336,9 @@ export function VolunteerPage() {
                     className="mt-0.5 w-4 h-4 accent-cyan-500 rounded border-white/10 bg-slate-900 cursor-pointer"
                   />
                   <span
-                    className={`text-xs text-ink leading-relaxed ${task.completed ? 'line-through text-ink-muted' : ''}`}
+                    className={`text-xs text-ink leading-relaxed ${
+                      task.completed ? 'line-through text-ink-muted' : ''
+                    } ${task.priority ? 'font-semibold text-rose-300' : ''}`}
                   >
                     {task.text}
                   </span>
@@ -250,7 +347,7 @@ export function VolunteerPage() {
             </div>
           </Panel>
 
-          {/* Incident Reporter Form */}
+          {/* Observations Form */}
           <Panel eyebrow="Field Observations" title="Report Crowd Incident">
             <form onSubmit={handleReport} className="space-y-4">
               {isOffline && (
@@ -294,9 +391,9 @@ export function VolunteerPage() {
                     onChange={(e) => setZoneId(e.target.value)}
                     className="w-full bg-slate-900 border border-white/10 rounded px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-cyan-500 cursor-pointer"
                   >
-                    {Object.keys(ZONE_LABELS).map((id) => (
+                    {Object.keys(finalZoneLabels).map((id) => (
                       <option key={id} value={id}>
-                        {ZONE_LABELS[id]}
+                        {finalZoneLabels[id]}
                       </option>
                     ))}
                   </select>
@@ -318,108 +415,84 @@ export function VolunteerPage() {
                     <option value="LOW">Low</option>
                     <option value="MEDIUM">Medium</option>
                     <option value="HIGH">High</option>
-                    <option value="CRITICAL">Critical</option>
                   </select>
                 </div>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label
-                  htmlFor="volt-desc"
+                  htmlFor="volt-description"
                   className="text-[10px] font-bold text-ink-muted uppercase"
                 >
-                  Description
+                  Details / Notes
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    id="volt-desc"
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="E.g., Congestion build-up near gate C entry turnstiles..."
-                    className="flex-1 bg-slate-900 border border-white/10 rounded px-3 py-1.5 text-xs text-ink focus:outline-none focus:border-cyan-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !description.trim()}
-                    className={`font-bold text-xs px-4 rounded transition-colors disabled:opacity-50 cursor-pointer select-none whitespace-nowrap text-white ${
-                      isOffline
-                        ? 'bg-amber-600 hover:bg-amber-500'
-                        : 'bg-cyan-600 hover:bg-cyan-500'
-                    }`}
-                  >
-                    {isOffline ? 'Queue Report' : 'Send Report'}
-                  </button>
-                </div>
+                <textarea
+                  id="volt-description"
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe location, crowd sizes, or specific safety concerns..."
+                  className="w-full bg-slate-900 border border-white/10 rounded p-2.5 text-xs text-ink focus:outline-none focus:border-cyan-500"
+                />
               </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-black text-xs font-bold transition-all"
+              >
+                {isSubmitting
+                  ? 'Reporting...'
+                  : isOffline
+                    ? 'Queue Offline Report'
+                    : 'Send Report to Command'}
+              </button>
             </form>
           </Panel>
         </div>
 
-        {/* Right Side: Log of incidents (Live or cached) */}
+        {/* Right Side: Log of Reported incidents */}
         <div className="space-y-6">
-          <Panel eyebrow="Command Incidents Log" title="Local Safety Incident Log">
-            <div className="space-y-4">
-              {/* Local Offline Queue */}
-              {offlineQueue.length > 0 && (
-                <div className="space-y-2.5">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                    Offline Sync Queue ({offlineQueue.length})
-                  </h4>
-                  {offlineQueue.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="border border-dashed border-amber-500/20 bg-amber-500/5 rounded-lg p-3 flex flex-col gap-1.5"
-                    >
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className="font-bold text-amber-300">{item.type} (PENDING SYNC)</span>
-                        <span className="text-ink-muted">
-                          {ZONE_LABELS[item.zoneId] || 'Stadium'}
+          <Panel eyebrow="Command Center Feed" title="Recent Field Logs">
+            <div className="divide-y divide-white/5 space-y-4">
+              {incidents.length === 0 ? (
+                <div className="py-8 text-center text-xs text-ink-muted">
+                  No incidents reported yet.
+                </div>
+              ) : (
+                incidents.map((incident) => (
+                  <div key={incident.id} className="pt-4 first:pt-0 flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-2xs">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-1.5 py-0.5 rounded font-black text-3xs border ${
+                            incident.severity === 'HIGH'
+                              ? 'bg-rose-950 text-rose-400 border-rose-800/40'
+                              : incident.severity === 'MEDIUM'
+                                ? 'bg-amber-950 text-amber-400 border-amber-800/40'
+                                : 'bg-white/5 text-ink-muted border-white/10'
+                          }`}
+                        >
+                          {incident.severity}
+                        </span>
+                        <span className="font-semibold uppercase tracking-wider text-ink-subdued">
+                          {incident.type}
                         </span>
                       </div>
-                      <p className="text-xs text-ink">{item.description}</p>
+                      <span className="text-ink-muted font-mono">
+                        {new Date(incident.createdAt).toLocaleTimeString()}
+                      </span>
                     </div>
-                  ))}
-                </div>
+
+                    <p className="text-xs text-ink leading-relaxed">{incident.description}</p>
+
+                    <div className="flex items-center justify-between text-3xs text-ink-muted font-mono">
+                      <span>Location: {finalZoneLabels[incident.zoneId] || 'Unknown'}</span>
+                      <span className="capitalize">Status: {incident.status.toLowerCase()}</span>
+                    </div>
+                  </div>
+                ))
               )}
-
-              {/* Incidents Feed */}
-              <div className="space-y-2.5">
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
-                  Cached Active Incident Queue ({incidents.length})
-                </h4>
-
-                {incidents.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-ink-muted border border-dashed border-white/10 rounded-lg">
-                    No safety incidents logged.
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-                    {incidents.map((inc) => (
-                      <div
-                        key={inc.id}
-                        className="border border-white/5 bg-slate-950/20 rounded-lg p-3 flex flex-col gap-1.5"
-                      >
-                        <div className="flex items-center justify-between text-[10px]">
-                          <span className="font-semibold text-brand-secondary">
-                            {inc.type} - {inc.severity}
-                          </span>
-                          <span className="text-ink-muted">
-                            {ZONE_LABELS[inc.zoneId] || 'Stadium'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-ink">{inc.description}</p>
-                        <div className="flex items-center justify-between text-[10px] text-ink-muted mt-1 border-t border-white/5 pt-1.5">
-                          <span>
-                            Status: <strong className="uppercase text-ink">{inc.status}</strong>
-                          </span>
-                          {inc.responderName && <span>Responder: {inc.responderName}</span>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
           </Panel>
         </div>

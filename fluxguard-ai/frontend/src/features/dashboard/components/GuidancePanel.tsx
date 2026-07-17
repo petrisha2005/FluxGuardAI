@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Badge, Panel } from '@/components/ui';
 import type { GuidanceRecommendation } from '../types/dashboard';
+import { cn } from '@/utils/classNames';
 
 export interface GuidancePanelProps {
   guidance: GuidanceRecommendation;
@@ -38,6 +39,10 @@ const FRONTEND_TRANSLATIONS: Record<string, Record<string, string>> = {
     'Maintain active zone monitoring.': 'Mantener el monitoreo activo de la zona.',
     'Reassess zone posture on the next simulation interval.':
       'Volver a evaluar la postura de la zona en el siguiente intervalo de simulación.',
+    'Confidence': 'Confianza',
+    'CRITICAL DIRECTIVE': 'DIRECTIVA CRÍTICA',
+    'ROUTINE DIRECTIVE': 'DIRECTIVA DE RUTINA',
+    'Directive Assessment': 'Evaluación de Directiva',
   },
   fr: {
     'Expect slow movement near': 'Attendez-vous à un mouvement lent près de',
@@ -69,6 +74,10 @@ const FRONTEND_TRANSLATIONS: Record<string, Record<string, string>> = {
     'Maintain active zone monitoring.': 'Maintenir une surveillance active de la zone.',
     'Reassess zone posture on the next simulation interval.':
       'Réévaluer la posture de la zone au prochain intervalle.',
+    'Confidence': 'Confiance',
+    'CRITICAL DIRECTIVE': 'DIRECTIVE CRITIQUE',
+    'ROUTINE DIRECTIVE': 'DIRECTIVE DE ROUTINE',
+    'Directive Assessment': 'Évaluation de Directive',
   },
   de: {
     'Expect slow movement near': 'Erwarten Sie langsame Bewegung in der Nähe von',
@@ -99,6 +108,10 @@ const FRONTEND_TRANSLATIONS: Record<string, Record<string, string>> = {
     'Maintain active zone monitoring.': 'Aktive Zonenüberwachung beibehalten.',
     'Reassess zone posture on the next simulation interval.':
       'Bewerten Sie die Zonenhaltung im nächsten Intervall neu.',
+    'Confidence': 'Vertrauen',
+    'CRITICAL DIRECTIVE': 'KRITISCHE ANWEISUNG',
+    'ROUTINE DIRECTIVE': 'ROUTINEANWEISUNG',
+    'Directive Assessment': 'Richtlinienbewertung',
   },
 };
 
@@ -127,24 +140,31 @@ export function GuidancePanel({ guidance, onApprove, onReject }: GuidancePanelPr
   const translatedMessage = translate(guidance.message, lang);
   const translatedActions = guidance.recommendedActions.map((action) => translate(action, lang));
 
+  // Determine operational priority styling
+  const isHighPriority = guidance.risk === 'HIGH' || guidance.risk === 'CRITICAL';
+  const borderStripeColor = isHighPriority ? 'border-l-risk-critical' : 'border-l-brand-primary';
+
   return (
     <Panel
       eyebrow={translate('Operational guidance', lang)}
       title={translatedHeadline}
       aria-label="Guidance panel"
+      className={cn('border-l-4', borderStripeColor)}
     >
       <div className="space-y-4">
         {/* Language Selection Buttons */}
-        <div className="flex justify-end gap-1.5 border-b border-white/5 pb-2 text-xs">
-          <span className="text-ink-muted self-center mr-1">Language:</span>
+        <div className="flex justify-end gap-1.5 border-b border-white/5 pb-2 text-[10px]">
+          <span className="text-ink-subdued self-center mr-1 font-mono uppercase tracking-wider font-bold">
+            Language:
+          </span>
           {(['en', 'es', 'fr', 'de'] as const).map((l) => (
             <button
               key={l}
               onClick={() => setLang(l)}
-              className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all ${
+              className={`px-2 py-0.5 rounded text-[9px] uppercase font-mono font-bold tracking-widest transition-all ${
                 lang === l
                   ? 'bg-brand-primary text-slate-950 font-black'
-                  : 'bg-white/5 border border-white/10 text-ink-muted hover:bg-white/10'
+                  : 'bg-white/5 border border-white/5 text-ink-subdued hover:bg-white/10'
               }`}
             >
               {l}
@@ -152,19 +172,24 @@ export function GuidancePanel({ guidance, onApprove, onReject }: GuidancePanelPr
           ))}
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <p className="max-w-2xl text-sm leading-6 text-ink-muted">{translatedMessage}</p>
-          <div className="flex flex-col items-end gap-1.5 shrink-0">
-            <Badge variant="info">
-              {guidance.confidence}%{' '}
-              {lang === 'en'
-                ? 'confidence'
-                : lang === 'es'
-                  ? 'confianza'
-                  : lang === 'fr'
-                    ? 'confiance'
-                    : 'Vertrauen'}{' '}
-              · {guidance.risk}
+        {/* Priority Banner */}
+        <div className="flex items-center justify-between bg-white/5 border border-white/5 px-3 py-2 rounded">
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                'w-2 h-2 rounded-full',
+                isHighPriority ? 'bg-risk-critical animate-pulse' : 'bg-brand-primary',
+              )}
+            />
+            <span className="text-[10px] font-bold uppercase tracking-widest font-mono text-ink">
+              {isHighPriority
+                ? translate('CRITICAL DIRECTIVE', lang)
+                : translate('ROUTINE DIRECTIVE', lang)}
+            </span>
+          </div>
+          <div className="flex gap-1.5">
+            <Badge variant={isHighPriority ? 'critical' : 'info'}>
+              {guidance.confidence}% {translate('Confidence', lang)}
             </Badge>
             {status === 'APPROVED' && (
               <Badge variant="safe">{translate('Broadcast Active', lang)}</Badge>
@@ -177,33 +202,47 @@ export function GuidancePanel({ guidance, onApprove, onReject }: GuidancePanelPr
             )}
           </div>
         </div>
-        <div>
-          <h3 className="text-sm font-semibold text-ink">
+
+        {/* Message and Confidence metrics */}
+        <div className="p-3.5 bg-surface-panel rounded border border-white/5 space-y-2">
+          <h4 className="text-[9px] uppercase font-bold tracking-widest font-mono text-ink-muted">
+            {translate('Directive Assessment', lang)}
+          </h4>
+          <p className="text-xs leading-5 text-ink-muted font-mono">{translatedMessage}</p>
+        </div>
+
+        {/* Actions Steps List */}
+        <div className="space-y-2">
+          <h4 className="text-[9px] uppercase font-bold tracking-widest font-mono text-ink-muted">
             {translate('Recommended actions', lang)}
-          </h3>
-          <ul className="mt-3 space-y-2">
-            {translatedActions.map((action) => (
+          </h4>
+          <ul className="space-y-2">
+            {translatedActions.map((action, idx) => (
               <li
                 key={action}
-                className="rounded-command border border-white/10 bg-white/5 px-3 py-2 text-sm text-ink-muted"
+                className="flex items-start gap-3 rounded border border-white/5 bg-white/5 px-3 py-2.5 text-xs text-ink-muted hover:border-white/10 transition-all"
               >
-                {action}
+                <span className="text-[8px] font-bold font-mono text-brand-primary bg-brand-primary/10 border border-brand-primary/20 px-1 py-0.5 rounded uppercase shrink-0">
+                  Step {String(idx + 1).padStart(2, '0')}
+                </span>
+                <span className="font-mono text-ink">{action}</span>
               </li>
             ))}
           </ul>
         </div>
 
+        {/* Approve/Reject Controls */}
         {status === 'PENDING_APPROVAL' && onApprove && onReject && (
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex items-center gap-3 pt-2 border-t border-white/5">
             <button
               onClick={onApprove}
-              className="text-xs font-semibold rounded bg-brand-primary text-slate-950 px-3 py-2 hover:bg-brand-primary/80 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-primary"
+              className="text-[10px] font-bold uppercase tracking-wider rounded bg-brand-primary text-slate-950 px-4 py-2 hover:bg-brand-primary/80 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-primary"
             >
               ✓ {translate('Approve Broadcast', lang)}
             </button>
             <button
               onClick={onReject}
-              className="text-xs font-semibold rounded border border-white/10 bg-white/5 text-ink-muted px-3 py-2 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/20 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-500"
+              className="text-[10px] font-bold uppercase tracking-wider rounded border border-white/5 bg-white/5 text-ink-subdued px-4 py-2 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/20 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-500"
             >
               ✕ {translate('Reject Directive', lang)}
             </button>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
 import { api } from '@/services/api';
-import { useSimulationState } from '@/features/simulation/simulationStore';
+import { useSimulationState, getActiveEventId } from '@/features/simulation/simulationStore';
 
 export function LandingPage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -10,11 +10,13 @@ export function LandingPage() {
 
   // Get reactive simulation state for real-time density and risk levels
   const { zones } = useSimulationState();
+  const activeEventId = getActiveEventId();
 
   // Calculate density and risk dynamically from simulation state
-  const totalDensity = zones.length > 0
-    ? Math.round(zones.reduce((total, z) => total + z.density, 0) / zones.length)
-    : 0;
+  const totalDensity =
+    zones.length > 0
+      ? Math.round(zones.reduce((total, z) => total + z.density, 0) / zones.length)
+      : 0;
 
   const riskLevel = zones.some((z) => z.risk === 'CRITICAL')
     ? 'CRITICAL'
@@ -33,19 +35,17 @@ export function LandingPage() {
     const fetchTelemetry = async () => {
       try {
         const [incidents, staffing] = await Promise.all([
-          api.fetchIncidents('e0000000-0000-0000-0000-000000000000'),
-          api.getStaffingStatus('e0000000-0000-0000-0000-000000000000'),
+          api.fetchIncidents(activeEventId),
+          api.getStaffingStatus(activeEventId),
         ]);
 
         if (incidents) {
-          setActiveIncidentCount(
-            incidents.filter((i) => i.status !== 'RESOLVED').length,
-          );
+          setActiveIncidentCount(incidents.filter((i) => i.status !== 'RESOLVED').length);
         }
 
         if (staffing && staffing.currentStaff) {
           const totalStaff = Object.values(staffing.currentStaff).reduce(
-            (a: number, b: any) => a + b,
+            (a: number, b: number) => a + b,
             0,
           );
           setActiveVolunteerCount(totalStaff);
@@ -60,7 +60,7 @@ export function LandingPage() {
     fetchTelemetry();
     const interval = setInterval(fetchTelemetry, 6000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeEventId]);
 
   useEffect(() => {
     if (!containerRef.current) return;

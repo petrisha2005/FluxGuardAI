@@ -1,9 +1,5 @@
 import { useState } from 'react';
-import {
-  setZoneDetour,
-  setZoneStatus,
-  useSimulationState,
-} from '../../simulation/simulationStore';
+import { setZoneDetour, setZoneStatus, useSimulationState } from '../../simulation/simulationStore';
 import { ZONE_LINKS } from '../../simulation/crowdSimulator';
 
 const ZONE_POSITIONS: Record<string, { x: number; y: number }> = {
@@ -31,20 +27,14 @@ function getDensityColor(density: number) {
   return 'text-emerald-400 fill-emerald-500/20 stroke-emerald-500';
 }
 
-function getDensityPulseColor(density: number) {
-  if (density > 85) return 'bg-purple-500';
-  if (density > 70) return 'bg-rose-500';
-  if (density > 45) return 'bg-amber-500';
-  return 'bg-emerald-500';
-}
-
 export function FlowVisualizer() {
   const sim = useSimulationState();
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
 
   // Filter links applicable to the currently loaded event zones
   const activeLinks = ZONE_LINKS.filter(
-    (link) => sim.zones.some((z) => z.id === link.source) && sim.zones.some((z) => z.id === link.target)
+    (link) =>
+      sim.zones.some((z) => z.id === link.source) && sim.zones.some((z) => z.id === link.target),
   );
 
   const selectedZone = sim.zones.find((z) => z.id === selectedZoneId);
@@ -62,7 +52,7 @@ export function FlowVisualizer() {
 
   // Find other gates in the active event that could act as a detour target
   const prospectiveDetourGates = sim.zones.filter(
-    (z) => z.type === 'gate' && z.id !== selectedZoneId
+    (z) => z.type === 'gate' && z.id !== selectedZoneId,
   );
 
   return (
@@ -72,7 +62,9 @@ export function FlowVisualizer() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold tracking-tight">Pedestrian Flow Network</h2>
-            <p className="text-xs text-ink-muted">Digital twin simulator visualizing zone nodes and flow velocities.</p>
+            <p className="text-xs text-ink-muted">
+              Digital twin simulator visualizing zone nodes and flow velocities.
+            </p>
           </div>
           <span className="text-[10px] uppercase font-semibold text-brand-primary tracking-wider animate-pulse flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-brand-primary"></span> Live Simulation
@@ -106,7 +98,8 @@ export function FlowVisualizer() {
 
               const isFlowCut = srcZone?.status === 'closed' || tgtZone?.status === 'closed';
               // Flow rate is represented by the source exit rate (or entry rate if source is gate)
-              const flowRate = srcZone?.type === 'gate' ? srcZone.entryRate : srcZone?.exitRate ?? 0;
+              const flowRate =
+                srcZone?.type === 'gate' ? srcZone.entryRate : (srcZone?.exitRate ?? 0);
 
               return (
                 <g key={`${link.source}-${link.target}-${idx}`}>
@@ -131,8 +124,8 @@ export function FlowVisualizer() {
                       isFlowCut
                         ? 'rgba(239, 68, 68, 0.2)'
                         : flowRate > 60
-                        ? 'rgba(168, 85, 247, 0.5)'
-                        : 'rgba(56, 189, 248, 0.4)'
+                          ? 'rgba(168, 85, 247, 0.5)'
+                          : 'rgba(56, 189, 248, 0.4)'
                     }
                     strokeWidth={isFlowCut ? 2 : 2.5 + flowRate / 45}
                     strokeLinecap="round"
@@ -218,8 +211,8 @@ export function FlowVisualizer() {
                         (pos.x + (ZONE_POSITIONS[zone.detourTargetId]?.x ?? 50)) / 2
                       }% ${
                         (pos.y + (ZONE_POSITIONS[zone.detourTargetId]?.y ?? 50)) / 2 + 10
-                      }% ${(ZONE_POSITIONS[zone.detourTargetId]?.x ?? 50)}% ${
-                        (ZONE_POSITIONS[zone.detourTargetId]?.y ?? 50)
+                      }% ${ZONE_POSITIONS[zone.detourTargetId]?.x ?? 50}% ${
+                        ZONE_POSITIONS[zone.detourTargetId]?.y ?? 50
                       }%`}
                       fill="none"
                       stroke="rgba(251, 191, 36, 0.4)"
@@ -296,8 +289,14 @@ export function FlowVisualizer() {
                 <div className="border-t border-white/5 pt-4 space-y-3">
                   <h4 className="text-xs font-bold">Scenario Control Options</h4>
                   <div className="space-y-1">
-                    <label className="text-[10px] text-ink-muted uppercase font-semibold">Detour Reroute Target</label>
+                    <label
+                      htmlFor="detour-target-select"
+                      className="text-[10px] text-ink-muted uppercase font-semibold"
+                    >
+                      Detour Reroute Target
+                    </label>
                     <select
+                      id="detour-target-select"
                       disabled={selectedZone.status !== 'closed'}
                       value={selectedZone.detourTargetId || 'none'}
                       onChange={(e) => handleSelectDetour(e.target.value)}
@@ -333,7 +332,8 @@ export function FlowVisualizer() {
             <span className="text-brand-primary text-xl mb-2">ℹ</span>
             <h3 className="font-bold text-ink text-sm">No Zone Selected</h3>
             <p className="text-2xs text-ink-muted max-w-[180px] mt-1">
-              Click any circular zone node on the network map to inspect metrics and run scenario detours.
+              Click any circular zone node on the network map to inspect metrics and run scenario
+              detours.
             </p>
           </div>
         )}

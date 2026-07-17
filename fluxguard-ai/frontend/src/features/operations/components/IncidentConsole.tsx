@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react';
 import { Panel } from '@/components/ui';
 import { api } from '@/services/api';
 import type { BackendIncident } from '@/services/api';
+import { cn } from '@/utils/classNames';
 
-const EVENT_ID = 'e0000000-0000-0000-0000-000000000000';
+import { useSimulationState, getActiveEventId } from '@/features/simulation/simulationStore';
 
 const ZONE_LABELS: Record<string, string> = {
   '00000000-0000-0000-0000-000000000001': 'North Gate',
@@ -72,50 +73,52 @@ function IncidentCard({
   };
 
   const severityColors: Record<string, string> = {
-    LOW: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    MEDIUM: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    HIGH: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-    CRITICAL: 'bg-red-500/10 text-red-400 border-red-500/20 animate-pulse',
+    LOW: 'bg-white/5 text-ink-subdued border-white/5',
+    MEDIUM: 'bg-white/5 text-risk-warning border-white/5',
+    HIGH: 'bg-white/5 text-risk-critical border-white/5',
+    CRITICAL: 'bg-risk-critical/10 text-risk-critical border-risk-critical/20 animate-pulse',
   };
 
   const statusColors: Record<string, string> = {
-    REPORTED: 'border-red-500/30 bg-red-500/5',
-    DISPATCHED: 'border-amber-500/30 bg-amber-500/5',
-    RESOLVED: 'border-emerald-500/20 bg-emerald-500/5 opacity-60',
+    REPORTED: 'border-l-2 border-l-risk-critical border-white/5 bg-surface-elevated',
+    DISPATCHED: 'border-l-2 border-l-risk-warning border-white/5 bg-surface-elevated',
+    RESOLVED: 'border-l-2 border-l-risk-safe border-white/5 bg-surface-elevated/40 opacity-50',
   };
 
   return (
     <div
-      className={`rounded-lg border p-4 space-y-3 transition-all duration-300 ${
-        statusColors[incident.status] || 'border-white/10'
-      }`}
+      className={cn(
+        'rounded border p-4 space-y-3 transition-all duration-300',
+        statusColors[incident.status] || 'border-white/5',
+      )}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5 font-mono">
             <span
-              className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${
-                severityColors[incident.severity]
-              }`}
+              className={cn(
+                'rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider',
+                severityColors[incident.severity],
+              )}
             >
               {incident.severity}
             </span>
-            <span className="rounded bg-slate-800 border border-slate-700 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
+            <span className="rounded bg-surface border border-white/5 px-1.5 py-0.5 text-[9px] font-bold text-ink-muted uppercase tracking-wider">
               {incident.type}
             </span>
-            <span className="text-xs font-semibold text-ink">
+            <span className="text-xs font-semibold text-ink font-sans">
               {ZONE_LABELS[incident.zoneId] || 'Unknown Zone'}
             </span>
           </div>
-          <p className="text-xs text-ink-muted">{incident.description}</p>
+          <p className="text-xs text-ink-muted leading-relaxed">{incident.description}</p>
         </div>
-        <div className="text-right text-[10px] font-mono text-ink-muted">
-          <div>{elapsed}</div>
+        <div className="text-right text-[10px] font-mono text-ink-subdued shrink-0 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+          {elapsed}
         </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-white/5 pt-3">
-        <div className="text-[10px] text-ink-muted font-mono">
+        <div className="text-[10px] text-ink-subdued font-mono uppercase tracking-wider">
           {incident.status === 'REPORTED' && 'Status: Awaiting Dispatch'}
           {incident.status === 'DISPATCHED' && `Responder: ${incident.responderName}`}
           {incident.status === 'RESOLVED' && 'Status: Resolved successfully'}
@@ -127,7 +130,7 @@ function IncidentCard({
               <select
                 value={selectedResponder}
                 onChange={(e) => setSelectedResponder(e.target.value)}
-                className="bg-slate-900 border border-white/10 rounded px-2 py-1 text-xs text-ink cursor-pointer focus:outline-none"
+                className="bg-surface border border-white/5 rounded px-2 py-1 text-xs text-ink cursor-pointer focus:outline-none"
               >
                 {RESPONDERS.map((r) => (
                   <option key={r} value={r}>
@@ -138,7 +141,7 @@ function IncidentCard({
               <button
                 onClick={handleDispatch}
                 disabled={isSubmitting}
-                className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] px-3 py-1 rounded transition-colors cursor-pointer select-none"
+                className="bg-brand-primary hover:bg-brand-primary/85 text-slate-950 font-mono font-bold text-[10px] uppercase tracking-wider px-3 py-1 rounded transition-colors cursor-pointer select-none"
               >
                 Dispatch
               </button>
@@ -149,7 +152,7 @@ function IncidentCard({
             <button
               onClick={handleResolve}
               disabled={isSubmitting}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] px-3 py-1 rounded transition-colors cursor-pointer select-none"
+              className="bg-risk-safe hover:bg-risk-safe/85 text-slate-950 font-mono font-bold text-[10px] uppercase tracking-wider px-3 py-1 rounded transition-colors cursor-pointer select-none"
             >
               Resolve
             </button>
@@ -161,6 +164,9 @@ function IncidentCard({
 }
 
 export function IncidentConsole() {
+  useSimulationState();
+  const activeEventId = getActiveEventId();
+
   const [incidents, setIncidents] = useState<BackendIncident[]>([]);
   const [type, setType] = useState('MEDICAL');
   const [zoneId, setZoneId] = useState('00000000-0000-0000-0000-000000000001');
@@ -170,7 +176,7 @@ export function IncidentConsole() {
 
   const fetchTickets = async () => {
     try {
-      const response = await api.fetchIncidents(EVENT_ID);
+      const response = await api.fetchIncidents(activeEventId);
       // Sort: Critical/High/Medium/Low, and then active before resolved
       const severityOrder: Record<string, number> = {
         CRITICAL: 4,
@@ -193,7 +199,8 @@ export function IncidentConsole() {
     fetchTickets();
     const interval = setInterval(fetchTickets, 3000);
     return () => clearInterval(interval);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeEventId]);
 
   const handleReport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,7 +208,7 @@ export function IncidentConsole() {
 
     setIsSubmitting(true);
     try {
-      await api.createIncident(EVENT_ID, zoneId, type, severity, description);
+      await api.createIncident(activeEventId, zoneId, type, severity, description);
       setDescription('');
       await fetchTickets();
     } catch (err) {
@@ -213,7 +220,7 @@ export function IncidentConsole() {
 
   const handleDispatch = async (incidentId: string, responderName: string) => {
     try {
-      await api.dispatchResponder(EVENT_ID, incidentId, responderName);
+      await api.dispatchResponder(activeEventId, incidentId, responderName);
       await fetchTickets();
     } catch (err) {
       console.error('Failed to dispatch responder:', err);
@@ -222,7 +229,7 @@ export function IncidentConsole() {
 
   const handleResolve = async (incidentId: string) => {
     try {
-      await api.resolveIncident(EVENT_ID, incidentId);
+      await api.resolveIncident(activeEventId, incidentId);
       await fetchTickets();
     } catch (err) {
       console.error('Failed to resolve incident:', err);
@@ -237,8 +244,8 @@ export function IncidentConsole() {
     >
       <div className="space-y-6">
         {/* Report Form */}
-        <form onSubmit={handleReport} className="rounded-xl border border-white/10 p-4 space-y-4">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+        <form onSubmit={handleReport} className="rounded-md border border-white/5 bg-surface-panel p-4 space-y-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted font-mono">
             Report New Incident
           </h3>
 
@@ -246,7 +253,7 @@ export function IncidentConsole() {
             <div className="space-y-1">
               <label
                 htmlFor="report-type"
-                className="text-[10px] font-bold text-ink-muted uppercase"
+                className="text-[9px] font-bold text-ink-subdued uppercase tracking-wider font-mono"
               >
                 Type
               </label>
@@ -254,7 +261,7 @@ export function IncidentConsole() {
                 id="report-type"
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full bg-slate-900 border border-white/10 rounded px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-cyan-500 cursor-pointer"
+                className="w-full bg-surface border border-white/5 rounded px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-brand-primary cursor-pointer font-mono"
               >
                 <option value="MEDICAL">Medical concern</option>
                 <option value="SECURITY">Security issue</option>
@@ -266,7 +273,7 @@ export function IncidentConsole() {
             <div className="space-y-1">
               <label
                 htmlFor="report-location"
-                className="text-[10px] font-bold text-ink-muted uppercase"
+                className="text-[9px] font-bold text-ink-subdued uppercase tracking-wider font-mono"
               >
                 Location
               </label>
@@ -274,7 +281,7 @@ export function IncidentConsole() {
                 id="report-location"
                 value={zoneId}
                 onChange={(e) => setZoneId(e.target.value)}
-                className="w-full bg-slate-900 border border-white/10 rounded px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-cyan-500 cursor-pointer"
+                className="w-full bg-surface border border-white/5 rounded px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-brand-primary cursor-pointer font-mono"
               >
                 {Object.keys(ZONE_LABELS).map((id) => (
                   <option key={id} value={id}>
@@ -287,7 +294,7 @@ export function IncidentConsole() {
             <div className="space-y-1">
               <label
                 htmlFor="report-severity"
-                className="text-[10px] font-bold text-ink-muted uppercase"
+                className="text-[9px] font-bold text-ink-subdued uppercase tracking-wider font-mono"
               >
                 Severity
               </label>
@@ -295,7 +302,7 @@ export function IncidentConsole() {
                 id="report-severity"
                 value={severity}
                 onChange={(e) => setSeverity(e.target.value)}
-                className="w-full bg-slate-900 border border-white/10 rounded px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-cyan-500 cursor-pointer"
+                className="w-full bg-surface border border-white/5 rounded px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-brand-primary cursor-pointer font-mono"
               >
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
@@ -308,7 +315,7 @@ export function IncidentConsole() {
           <div className="space-y-1">
             <label
               htmlFor="report-description"
-              className="text-[10px] font-bold text-ink-muted uppercase"
+              className="text-[9px] font-bold text-ink-subdued uppercase tracking-wider font-mono"
             >
               Description
             </label>
@@ -319,12 +326,12 @@ export function IncidentConsole() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="E.g., Spill on concourse floor, minor slip risk..."
-                className="flex-1 bg-slate-900 border border-white/10 rounded px-3 py-1.5 text-xs text-ink focus:outline-none focus:border-cyan-500"
+                className="flex-1 bg-surface border border-white/5 rounded px-3 py-1.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-brand-primary font-mono placeholder:text-ink-subdued/40"
               />
               <button
                 type="submit"
                 disabled={isSubmitting || !description.trim()}
-                className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs px-4 rounded transition-colors disabled:opacity-50 cursor-pointer select-none whitespace-nowrap"
+                className="bg-brand-primary hover:bg-brand-primary/85 text-slate-950 font-mono font-bold text-[10px] uppercase tracking-wider px-4 rounded transition-colors disabled:opacity-50 cursor-pointer select-none whitespace-nowrap"
               >
                 Report
               </button>

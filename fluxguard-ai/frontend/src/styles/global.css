@@ -20,9 +20,9 @@ body {
   margin: 0;
   min-width: 320px;
   background:
-    radial-gradient(circle at top left, rgb(56 189 248 / 0.14), transparent 30rem),
-    linear-gradient(135deg, #07111f 0%, #0a1322 46%, #09111d 100%);
-  color: #f8fafc;
+    radial-gradient(circle at top left, rgb(56 189 248 / 0.04), transparent 45rem),
+    #090e16;
+  color: #f1f5f9;
 }
 
 *:focus-visible {

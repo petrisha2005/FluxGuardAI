@@ -51,7 +51,6 @@ export function setActiveEventId(eventId: string) {
   }
 }
 
-
 function formatTimestamp(timestamp: string): string {
   return new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
@@ -81,6 +80,8 @@ function createInitialState(): SimulationState {
     ],
     tick: 0,
     lastUpdated: timestamp,
+    isEvacuationActive: false,
+    initialEvacuationCrowd: 0,
   };
 }
 
@@ -330,7 +331,11 @@ export function disconnectWebSocket() {
 export function updateSimulation(): SimulationState {
   const nextTick = currentState.tick + 1;
   const timestamp = getSimulationTimestamp(nextTick);
-  const nextLocalZones = simulateNextCrowdZones(currentState.zones, nextTick);
+  const nextLocalZones = simulateNextCrowdZones(
+    currentState.zones,
+    nextTick,
+    currentState.isEvacuationActive,
+  );
 
   // Synchronous tick update (client-side prediction local baseline)
   const nextAssessments = assessCrowdRisks(nextLocalZones, timestamp);
@@ -349,6 +354,8 @@ export function updateSimulation(): SimulationState {
     events: [...nextEvents, ...currentState.events].slice(0, MAX_EVENTS),
     tick: nextTick,
     lastUpdated: timestamp,
+    isEvacuationActive: currentState.isEvacuationActive,
+    initialEvacuationCrowd: currentState.initialEvacuationCrowd,
   };
 
   emitChange();
@@ -394,7 +401,11 @@ export function updateSimulation(): SimulationState {
           const targetAlert = sortedAlerts[0];
           if (targetAlert.severity === 'critical' || targetAlert.severity === 'high') {
             try {
-              worstAlertGuidance = await api.generateGuidance(activeEventId, targetAlert.id, 'operator');
+              worstAlertGuidance = await api.generateGuidance(
+                activeEventId,
+                targetAlert.id,
+                'operator',
+              );
             } catch (e) {
               console.warn('AI Guidance generation failed:', e);
             }
@@ -547,13 +558,12 @@ export async function initializeSimulationForEvent(eventId: string) {
   }
 }
 
-
 export function useSimulationState(): SimulationState {
   return useSyncExternalStore(subscribe, getState, getState);
 }
 
 export function setZoneStatus(zoneId: string, status: 'open' | 'closed') {
-  const zoneIndex = currentState.zones.findIndex(z => z.id === zoneId);
+  const zoneIndex = currentState.zones.findIndex((z) => z.id === zoneId);
   if (zoneIndex !== -1) {
     currentState.zones[zoneIndex] = {
       ...currentState.zones[zoneIndex],
@@ -564,7 +574,7 @@ export function setZoneStatus(zoneId: string, status: 'open' | 'closed') {
 }
 
 export function setZoneDetour(zoneId: string, detourTargetId: string | undefined) {
-  const zoneIndex = currentState.zones.findIndex(z => z.id === zoneId);
+  const zoneIndex = currentState.zones.findIndex((z) => z.id === zoneId);
   if (zoneIndex !== -1) {
     currentState.zones[zoneIndex] = {
       ...currentState.zones[zoneIndex],
@@ -572,4 +582,70 @@ export function setZoneDetour(zoneId: string, detourTargetId: string | undefined
     };
     emitChange();
   }
+}
+
+export function getSimIdFromUuid(uuid: string): string {
+  return REV_ZONE_MAP[uuid] || '';
+}
+
+export function getUuidFromSimId(simId: string): string {
+  return ZONE_MAP[simId] || '';
+}
+
+export function triggerEvacuation() {
+  const totalCrowd = currentState.zones.reduce((sum, z) => {
+    if (z.type === 'concourse') {
+      return sum + Math.round((z.density * (z.capacity || 5000)) / 100);
+    } else {
+      return sum + (z.queueLength || 0);
+    }
+  }, 0);
+
+  currentState = {
+    ...currentState,
+    isEvacuationActive: true,
+    initialEvacuationCrowd: totalCrowd || 1000,
+  };
+  emitChange();
+}
+
+export function cancelEvacuation() {
+  currentState = {
+    ...currentState,
+    isEvacuationActive: false,
+    initialEvacuationCrowd: 0,
+  };
+  emitChange();
+}
+
+export function registerFeedbackAnomaly(zoneId: string, rating: number, comment: string) {
+  const zoneIndex = currentState.zones.findIndex((z) => z.id === zoneId);
+  if (zoneIndex === -1) return;
+
+  const zoneName = currentState.zones[zoneIndex].name;
+  const timestamp = getSimulationTimestamp(currentState.tick);
+
+  const newEvent = {
+    id: `feedback-anomaly-${Date.now()}`,
+    zoneId,
+    severity: rating === 1 ? ('HIGH' as const) : ('MEDIUM' as const),
+    title: `Field Anomaly reported at ${zoneName}`,
+    description: `Feedback comment: "${comment}" (Rating: ${rating}/5)`,
+    timestamp: formatTimestamp(timestamp),
+  };
+
+  const updatedZones = [...currentState.zones];
+  updatedZones[zoneIndex] = {
+    ...updatedZones[zoneIndex],
+    risk: rating === 1 ? 'CRITICAL' : 'HIGH',
+    density: Math.min(95, updatedZones[zoneIndex].density + 15),
+  };
+
+  currentState = {
+    ...currentState,
+    zones: updatedZones,
+    events: [newEvent, ...currentState.events].slice(0, MAX_EVENTS),
+  };
+
+  emitChange();
 }

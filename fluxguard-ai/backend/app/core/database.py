@@ -1405,3 +1405,65 @@ def get_zone_links(event_id: UUID) -> list[dict]:
             for link in _zone_links
             if link["source_id"] in event_zones and link["target_id"] in event_zones
         ]
+
+
+def get_cameras_for_event(event_id: UUID) -> list[dict]:
+    with _lock:
+        event_zones = [z for z in _zones.values() if z["event_id"] == event_id]
+        cameras_list = []
+        for zone in event_zones:
+            zone_id_str = str(zone["id"])
+            if zone["name"] == "North Gate":
+                cameras_list.append({
+                    "id": f"{zone_id_str}-cam-1",
+                    "zone_id": zone["id"],
+                    "name": "North Entrance Turnstiles - Cam 1",
+                    "fps": 30,
+                    "accuracy": 0.94,
+                    "status": "active"
+                })
+            elif zone["name"] == "East Concourse":
+                cameras_list.append({
+                    "id": f"{zone_id_str}-cam-1",
+                    "zone_id": zone["id"],
+                    "name": "East Concourse Central - Cam 1",
+                    "fps": 30,
+                    "accuracy": 0.96,
+                    "status": "active"
+                })
+                cameras_list.append({
+                    "id": f"{zone_id_str}-cam-2",
+                    "zone_id": zone["id"],
+                    "name": "East Concourse Exit Stairwell - Cam 2",
+                    "fps": 24,
+                    "accuracy": 0.91,
+                    "status": "active"
+                })
+            elif zone["name"] == "Gate C":
+                cameras_list.append({
+                    "id": f"{zone_id_str}-cam-1",
+                    "zone_id": zone["id"],
+                    "name": "Gate C Main Turnstile - Cam 1",
+                    "fps": 30,
+                    "accuracy": 0.95,
+                    "status": "active"
+                })
+            elif zone["name"] == "West Entrance":
+                cameras_list.append({
+                    "id": f"{zone_id_str}-cam-1",
+                    "zone_id": zone["id"],
+                    "name": "West Plaza Entry - Cam 1",
+                    "fps": 30,
+                    "accuracy": 0.93,
+                    "status": "active"
+                })
+            else:
+                cameras_list.append({
+                    "id": f"{zone_id_str}-cam-1",
+                    "zone_id": zone["id"],
+                    "name": f"{zone['name']} Monitoring - Cam 1",
+                    "fps": 24,
+                    "accuracy": 0.92,
+                    "status": "active"
+                })
+        return cameras_list

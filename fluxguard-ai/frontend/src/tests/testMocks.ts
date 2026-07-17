@@ -20,6 +20,24 @@ export const mockBackendVenue = {
   metadata: { latitude: -15.4167, longitude: 28.2833 },
 };
 
+export const mockBackendCamera = {
+  id: 'c0000000-0000-0000-0000-000000000001',
+  zoneId: '00000000-0000-0000-0000-000000000001',
+  name: 'North Entrance Turnstiles - Cam 1',
+  fps: 30,
+  accuracy: 0.94,
+  status: 'active',
+};
+
+export const mockBackendRoutingRecommendation = {
+  sourceZoneId: '00000000-0000-0000-0000-000000000003',
+  targetZoneId: '00000000-0000-0000-0000-000000000004',
+  reason:
+    'High queue backlog detected at Gate C. Reroute incoming flow to West Entrance to optimize clearance times.',
+  delayReductionMinutes: 12,
+  confidence: 0.94,
+  reliefTimeMinutes: 8,
+};
 
 export const mockBackendZones = [
   {
@@ -141,7 +159,9 @@ export function setupFetchMocks() {
       !url.includes('/feedback') &&
       !url.includes('/guidance') &&
       !url.includes('/measurements') &&
-      !url.includes('/integrations')
+      !url.includes('/integrations') &&
+      !url.includes('/cameras') &&
+      !url.includes('/routing-recommendations')
     ) {
       responseData = { data: [mockBackendEvent] };
     } else if (url.includes('/api/v1/venues') && !url.includes('/events')) {
@@ -150,6 +170,10 @@ export function setupFetchMocks() {
       responseData = { data: [mockBackendEvent] };
     } else if (url.includes('/zones')) {
       responseData = { data: mockBackendZones };
+    } else if (url.includes('/cameras')) {
+      responseData = { data: [mockBackendCamera] };
+    } else if (url.includes('/routing-recommendations')) {
+      responseData = { data: [mockBackendRoutingRecommendation] };
     } else if (url.includes('/predictions/run')) {
       responseData = { data: [] };
     } else if (url.includes('/measurements')) {
@@ -160,6 +184,8 @@ export function setupFetchMocks() {
       responseData = { data: mockBackendAlerts };
     } else if (url.includes('/guidance/generate')) {
       responseData = { data: mockBackendGuidance };
+    } else if (url.includes('/guidance/active')) {
+      responseData = { data: [] };
     } else if (url.includes('/feedback')) {
       responseData = { data: { success: true } };
     } else if (url.includes('/integrations')) {

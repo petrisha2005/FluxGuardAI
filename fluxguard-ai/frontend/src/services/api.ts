@@ -24,6 +24,23 @@ export interface BackendVenue {
   };
 }
 
+export interface BackendCamera {
+  id: string;
+  zoneId: string;
+  name: string;
+  fps: number;
+  accuracy: number;
+  status: string;
+}
+
+export interface BackendRoutingRecommendation {
+  sourceZoneId: string;
+  targetZoneId: string;
+  reason: string;
+  delayReductionMinutes: number;
+  confidence: number;
+  reliefTimeMinutes: number;
+}
 
 export interface BackendZone {
   id: string;
@@ -90,6 +107,7 @@ export interface BackendStaffingStatus {
   currentStaff: Record<string, number>;
   recommendedStaff: Record<string, number>;
   suggestions: BackendStaffingSuggestion[];
+  alerts?: string[];
 }
 
 export interface BackendIncident {
@@ -144,11 +162,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   fetchVenues: () => request<BackendVenue[]>('/api/v1/venues'),
 
-  fetchEventsByVenue: (venueId: string) => request<BackendEvent[]>(`/api/v1/venues/${venueId}/events`),
+  fetchEventsByVenue: (venueId: string) =>
+    request<BackendEvent[]>(`/api/v1/venues/${venueId}/events`),
 
   fetchEvents: () => request<BackendEvent[]>('/api/v1/events'),
 
   fetchZones: (eventId: string) => request<BackendZone[]>(`/api/v1/events/${eventId}/zones`),
+
+  fetchCameras: (eventId: string) => request<BackendCamera[]>(`/api/v1/events/${eventId}/cameras`),
+
+  fetchRoutingRecommendations: (eventId: string) =>
+    request<BackendRoutingRecommendation[]>(`/api/v1/events/${eventId}/routing-recommendations`),
 
   runPredictionsCycle: (eventId: string) =>
     request<BackendPrediction[]>(`/api/v1/events/${eventId}/predictions/run`, {

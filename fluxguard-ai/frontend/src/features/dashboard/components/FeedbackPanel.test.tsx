@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '@/services/api';
 import { setupFetchMocks } from '@/tests/testMocks';
+import { resetSimulation } from '@/features/simulation/simulationStore';
 import { FeedbackPanel } from './FeedbackPanel';
 
 describe('FeedbackPanel', () => {
   beforeEach(() => {
     setupFetchMocks();
+    resetSimulation();
   });
 
   it('renders all form elements with accessible labels', () => {
@@ -53,5 +55,27 @@ describe('FeedbackPanel', () => {
 
     expect(screen.getByLabelText(/comment/i)).toBeInTheDocument();
     expect((screen.getByLabelText(/comment/i) as HTMLTextAreaElement).value).toBe('');
+  });
+
+  it('escalates low rating feedback as an anomaly trigger in the simulation store', async () => {
+    render(<FeedbackPanel />);
+
+    const textarea = screen.getByLabelText(/comment/i);
+    fireEvent.change(textarea, { target: { value: 'Critical crowding alert' } });
+
+    const oneStar = screen.getByRole('radio', { name: /1 star/i });
+    fireEvent.click(oneStar);
+
+    const submitButton = screen.getByRole('button', { name: /submit feedback/i });
+    fireEvent.click(submitButton);
+
+    expect(await screen.findByText(/thank you for your feedback/i)).toBeInTheDocument();
+
+    const { getState } = await import('@/features/simulation/simulationStore');
+    const state = getState();
+    const anomalyEvent = state.events.find((e) => e.title.includes('Field Anomaly reported'));
+    expect(anomalyEvent).toBeDefined();
+    expect(anomalyEvent?.description).toContain('Critical crowding alert');
+    expect(anomalyEvent?.severity).toBe('HIGH');
   });
 });

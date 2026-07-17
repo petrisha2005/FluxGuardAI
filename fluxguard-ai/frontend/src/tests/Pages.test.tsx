@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -46,6 +46,9 @@ describe('CopilotPage', () => {
   });
 });
 
+import { api } from '@/services/api';
+import type { BackendStaffingStatus } from '@/services/api';
+
 describe('OperationsPage', () => {
   beforeEach(() => {
     setupFetchMocks();
@@ -62,6 +65,42 @@ describe('OperationsPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /submit feedback/i })).toBeInTheDocument();
   });
+
+  it('renders predictive staffing alerts in the StaffingPanel', async () => {
+    const mockStaffingStatus: BackendStaffingStatus = {
+      currentStaff: {
+        '00000000-0000-0000-0000-000000000001': 20,
+        '00000000-0000-0000-0000-000000000003': 25,
+      },
+      recommendedStaff: {
+        '00000000-0000-0000-0000-000000000001': 15,
+        '00000000-0000-0000-0000-000000000003': 30,
+      },
+      suggestions: [
+        {
+          fromZoneId: '00000000-0000-0000-0000-000000000001',
+          toZoneId: '00000000-0000-0000-0000-000000000003',
+          count: 5,
+          reason: 'Redeploy 5 stewards from North Gate to cover congestion risks.',
+        },
+      ],
+      alerts: [
+        'Upcoming Crowd Surge: Zone Gate C is projected to reach 85% density within 20 minutes. Deficit of 5 stewards detected; immediate redeployment recommended.',
+      ],
+    };
+
+    const getStaffingSpy = vi.spyOn(api, 'getStaffingStatus').mockResolvedValue(mockStaffingStatus);
+
+    render(<OperationsPage />);
+
+    // Wait for the predictive staffing alert warning to render
+    expect(await screen.findByTestId('predictive-staffing-alert')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Zone Gate C is projected to reach 85% density within 20 minutes/i),
+    ).toBeInTheDocument();
+
+    getStaffingSpy.mockRestore();
+  });
 });
 
 describe('SignagePage', () => {
@@ -70,13 +109,28 @@ describe('SignagePage', () => {
     resetSimulation();
   });
 
-  it('renders all physical display boards with default greeting', () => {
+  it('renders all physical display boards with default greeting and supports translations', async () => {
     render(<SignagePage />);
 
     expect(screen.getByText(/Live Stadium Signage Console/i)).toBeInTheDocument();
-    expect(screen.getByText(/North Gate - Entrance Screen/i)).toBeInTheDocument();
-    expect(screen.getByText(/East Concourse - Evacuation Screen/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Welcome to Lucusa Stadium/i).length).toBe(4);
+    expect(screen.getByText(/North Gate - Screen/i)).toBeInTheDocument();
+    expect(screen.getByText(/East Concourse - Screen/i)).toBeInTheDocument();
+
+    // Toggle language to French
+    const select = screen.getByRole('combobox', { name: /Language Selector/i });
+    act(() => {
+      fireEvent.change(select, { target: { value: 'fr' } });
+    });
+
+    expect(screen.getByText(/Console de signalisation du stade en direct/i)).toBeInTheDocument();
+
+    // Trigger simulation test alert
+    const triggerBtn = screen.getByRole('button', { name: /Déclencher l'alerte test/i });
+    act(() => {
+      triggerBtn.click();
+    });
+
+    expect(screen.getByText(/Rediriger le trafic des zones encombrées/i)).toBeInTheDocument();
   });
 });
 
@@ -93,6 +147,9 @@ describe('VolunteerPage', () => {
     expect(screen.getByText(/Volunteer Command Dashboard/i)).toBeInTheDocument();
     expect(screen.getByText(/My Active Assignments/i)).toBeInTheDocument();
     expect(screen.getByText(/Report Crowd Incident/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Monitor turnstile entry speeds and queue lines at North Gate/i),
+    ).toBeInTheDocument();
   });
 });
 
@@ -130,7 +187,9 @@ describe('CityHubPage', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('heading', { name: /City Command Center/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /City Command Center/i }),
+    ).toBeInTheDocument();
     expect(screen.getAllByText(/Active Venues/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Geographic Operations Map/i)).toBeInTheDocument();
   });
