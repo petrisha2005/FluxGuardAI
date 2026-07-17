@@ -51,7 +51,6 @@ export function setActiveEventId(eventId: string) {
   }
 }
 
-
 function formatTimestamp(timestamp: string): string {
   return new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
@@ -332,7 +331,11 @@ export function disconnectWebSocket() {
 export function updateSimulation(): SimulationState {
   const nextTick = currentState.tick + 1;
   const timestamp = getSimulationTimestamp(nextTick);
-  const nextLocalZones = simulateNextCrowdZones(currentState.zones, nextTick, currentState.isEvacuationActive);
+  const nextLocalZones = simulateNextCrowdZones(
+    currentState.zones,
+    nextTick,
+    currentState.isEvacuationActive,
+  );
 
   // Synchronous tick update (client-side prediction local baseline)
   const nextAssessments = assessCrowdRisks(nextLocalZones, timestamp);
@@ -398,7 +401,11 @@ export function updateSimulation(): SimulationState {
           const targetAlert = sortedAlerts[0];
           if (targetAlert.severity === 'critical' || targetAlert.severity === 'high') {
             try {
-              worstAlertGuidance = await api.generateGuidance(activeEventId, targetAlert.id, 'operator');
+              worstAlertGuidance = await api.generateGuidance(
+                activeEventId,
+                targetAlert.id,
+                'operator',
+              );
             } catch (e) {
               console.warn('AI Guidance generation failed:', e);
             }
@@ -551,13 +558,12 @@ export async function initializeSimulationForEvent(eventId: string) {
   }
 }
 
-
 export function useSimulationState(): SimulationState {
   return useSyncExternalStore(subscribe, getState, getState);
 }
 
 export function setZoneStatus(zoneId: string, status: 'open' | 'closed') {
-  const zoneIndex = currentState.zones.findIndex(z => z.id === zoneId);
+  const zoneIndex = currentState.zones.findIndex((z) => z.id === zoneId);
   if (zoneIndex !== -1) {
     currentState.zones[zoneIndex] = {
       ...currentState.zones[zoneIndex],
@@ -568,7 +574,7 @@ export function setZoneStatus(zoneId: string, status: 'open' | 'closed') {
 }
 
 export function setZoneDetour(zoneId: string, detourTargetId: string | undefined) {
-  const zoneIndex = currentState.zones.findIndex(z => z.id === zoneId);
+  const zoneIndex = currentState.zones.findIndex((z) => z.id === zoneId);
   if (zoneIndex !== -1) {
     currentState.zones[zoneIndex] = {
       ...currentState.zones[zoneIndex],
@@ -631,7 +637,7 @@ export function registerFeedbackAnomaly(zoneId: string, rating: number, comment:
   const updatedZones = [...currentState.zones];
   updatedZones[zoneIndex] = {
     ...updatedZones[zoneIndex],
-    risk: rating === 1 ? 'critical' : 'high',
+    risk: rating === 1 ? 'CRITICAL' : 'HIGH',
     density: Math.min(95, updatedZones[zoneIndex].density + 15),
   };
 

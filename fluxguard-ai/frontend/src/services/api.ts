@@ -42,8 +42,6 @@ export interface BackendRoutingRecommendation {
   reliefTimeMinutes: number;
 }
 
-
-
 export interface BackendZone {
   id: string;
   eventId: string;
@@ -164,7 +162,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   fetchVenues: () => request<BackendVenue[]>('/api/v1/venues'),
 
-  fetchEventsByVenue: (venueId: string) => request<BackendEvent[]>(`/api/v1/venues/${venueId}/events`),
+  fetchEventsByVenue: (venueId: string) =>
+    request<BackendEvent[]>(`/api/v1/venues/${venueId}/events`),
 
   fetchEvents: () => request<BackendEvent[]>('/api/v1/events'),
 

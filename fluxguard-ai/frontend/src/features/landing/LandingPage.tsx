@@ -13,9 +13,10 @@ export function LandingPage() {
   const activeEventId = getActiveEventId();
 
   // Calculate density and risk dynamically from simulation state
-  const totalDensity = zones.length > 0
-    ? Math.round(zones.reduce((total, z) => total + z.density, 0) / zones.length)
-    : 0;
+  const totalDensity =
+    zones.length > 0
+      ? Math.round(zones.reduce((total, z) => total + z.density, 0) / zones.length)
+      : 0;
 
   const riskLevel = zones.some((z) => z.risk === 'CRITICAL')
     ? 'CRITICAL'
@@ -39,14 +40,12 @@ export function LandingPage() {
         ]);
 
         if (incidents) {
-          setActiveIncidentCount(
-            incidents.filter((i) => i.status !== 'RESOLVED').length,
-          );
+          setActiveIncidentCount(incidents.filter((i) => i.status !== 'RESOLVED').length);
         }
 
         if (staffing && staffing.currentStaff) {
           const totalStaff = Object.values(staffing.currentStaff).reduce(
-            (a: number, b: any) => a + b,
+            (a: number, b: number) => a + b,
             0,
           );
           setActiveVolunteerCount(totalStaff);
@@ -61,7 +60,7 @@ export function LandingPage() {
     fetchTelemetry();
     const interval = setInterval(fetchTelemetry, 6000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeEventId]);
 
   useEffect(() => {
     if (!containerRef.current) return;

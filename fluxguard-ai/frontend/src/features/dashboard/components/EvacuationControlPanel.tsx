@@ -48,7 +48,8 @@ export function EvacuationControlPanel() {
               Emergency Management Console
             </h3>
             <p className="text-xs text-ink-muted leading-relaxed">
-              Active stadium safety posture is steady. Dispatch venue-wide evacuation directives if an incident occurs.
+              Active stadium safety posture is steady. Dispatch venue-wide evacuation directives if
+              an incident occurs.
             </p>
           </div>
 
@@ -88,7 +89,8 @@ export function EvacuationControlPanel() {
                 🚨 EMERGENCY EVACUATION ACTIVE
               </h3>
               <p className="text-xs text-rose-500/80 leading-relaxed font-semibold">
-                Turnstiles set to outflow mode. Dispatched exit route guidelines to all digital screens.
+                Turnstiles set to outflow mode. Dispatched exit route guidelines to all digital
+                screens.
               </p>
             </div>
 
@@ -103,19 +105,27 @@ export function EvacuationControlPanel() {
           {/* Telemetry HUD Grid */}
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div className="rounded-xl bg-rose-950/10 border border-rose-500/10 p-3 text-center">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-400/80">Clearance Status</div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-400/80">
+                Clearance Status
+              </div>
               <div className="text-lg font-black text-rose-400 mt-1">{clearancePct}%</div>
             </div>
             <div className="rounded-xl bg-rose-950/10 border border-rose-500/10 p-3 text-center">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-400/80">Est. Time to Clear</div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-400/80">
+                Est. Time to Clear
+              </div>
               <div className="text-lg font-black text-rose-400 mt-1">{estMinutesRemaining} min</div>
             </div>
             <div className="rounded-xl bg-rose-950/10 border border-rose-500/10 p-3 text-center">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-400/80">Remaining Headcount</div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-400/80">
+                Remaining Headcount
+              </div>
               <div className="text-lg font-black text-rose-400 mt-1">{currentCrowd} pax</div>
             </div>
             <div className="rounded-xl bg-rose-950/10 border border-rose-500/10 p-3 text-center">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-400/80">Initial Load</div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-400/80">
+                Initial Load
+              </div>
               <div className="text-lg font-black text-ink mt-1">{initialCrowd} pax</div>
             </div>
           </div>

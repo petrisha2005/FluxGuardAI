@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, BackendVenue } from '../../services/api';
+import { api } from '../../services/api';
 import { setActiveEventId, useSimulationState } from '../simulation/simulationStore';
 
 interface VenueStatus {
@@ -20,11 +20,12 @@ interface VenueStatus {
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
 
-const mapLatitudeBounds = { min: -15.44, max: -15.40 };
+const mapLatitudeBounds = { min: -15.44, max: -15.4 };
 const mapLongitudeBounds = { min: 28.26, max: 28.32 };
 
 function getMapCoordinates(lat: number, lng: number) {
-  const x = ((lng - mapLongitudeBounds.min) / (mapLongitudeBounds.max - mapLongitudeBounds.min)) * 100;
+  const x =
+    ((lng - mapLongitudeBounds.min) / (mapLongitudeBounds.max - mapLongitudeBounds.min)) * 100;
   const y = ((mapLatitudeBounds.max - lat) / (mapLatitudeBounds.max - mapLatitudeBounds.min)) * 100;
   return { x: Math.max(10, Math.min(90, x)), y: Math.max(10, Math.min(90, y)) };
 }
@@ -57,7 +58,7 @@ export function CityHubPage() {
         venues.map(async (venue) => {
           const events = await api.fetchEventsByVenue(venue.id);
           const activeEvent = events[0] || { id: '', name: 'No Active Event' };
-          
+
           let averageDensity = 0;
           let activeIncidentsCount = 0;
           let activeAlertsCount = 0;
@@ -96,7 +97,10 @@ export function CityHubPage() {
             }
 
             if (staffing && staffing.currentStaff) {
-              totalStewards = Object.values(staffing.currentStaff).reduce((acc, val) => acc + val, 0);
+              totalStewards = Object.values(staffing.currentStaff).reduce(
+                (acc, val) => acc + val,
+                0,
+              );
             }
           }
 
@@ -119,7 +123,7 @@ export function CityHubPage() {
             totalStewards,
             riskLevel,
           };
-        })
+        }),
       );
       setVenuesStatus(statusList);
       setLoading(false);
@@ -133,6 +137,7 @@ export function CityHubPage() {
     // Refresh city data every 5 seconds
     const interval = setInterval(fetchCityOverviewData, 5000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sim.tick]);
 
   const handleControlVenue = (eventId: string) => {
@@ -155,10 +160,10 @@ export function CityHubPage() {
   const worstRisk = venuesStatus.some((v) => v.riskLevel === 'CRITICAL')
     ? 'CRITICAL'
     : venuesStatus.some((v) => v.riskLevel === 'HIGH')
-    ? 'HIGH'
-    : venuesStatus.some((v) => v.riskLevel === 'MEDIUM')
-    ? 'MEDIUM'
-    : 'LOW';
+      ? 'HIGH'
+      : venuesStatus.some((v) => v.riskLevel === 'MEDIUM')
+        ? 'MEDIUM'
+        : 'LOW';
 
   return (
     <div className="space-y-8 text-ink">
@@ -173,7 +178,9 @@ export function CityHubPage() {
       {/* Aggregate Stats Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-white/5 bg-surface-elevated/40 p-5 backdrop-blur">
-          <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Active Venues</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            Active Venues
+          </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl font-bold">{venuesStatus.length}</span>
             <span className="text-xs text-emerald-400">● Live</span>
@@ -181,7 +188,9 @@ export function CityHubPage() {
         </div>
 
         <div className="rounded-xl border border-white/5 bg-surface-elevated/40 p-5 backdrop-blur">
-          <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">City Alerts</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            City Alerts
+          </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl font-bold">{totalAlerts}</span>
             {totalAlerts > 0 ? (
@@ -193,7 +202,9 @@ export function CityHubPage() {
         </div>
 
         <div className="rounded-xl border border-white/5 bg-surface-elevated/40 p-5 backdrop-blur">
-          <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Active Safety Incidents</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            Active Safety Incidents
+          </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl font-bold">{totalActiveIncidents}</span>
             {totalActiveIncidents > 0 ? (
@@ -205,7 +216,9 @@ export function CityHubPage() {
         </div>
 
         <div className="rounded-xl border border-white/5 bg-surface-elevated/40 p-5 backdrop-blur">
-          <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Active Stewards Deployed</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            Active Stewards Deployed
+          </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl font-bold">{totalCityStewards}</span>
             <span className="text-xs text-ink-muted">across all zones</span>
@@ -219,7 +232,9 @@ export function CityHubPage() {
         <div className="lg:col-span-1 rounded-2xl border border-white/5 bg-surface-elevated/20 p-6 flex flex-col gap-4 backdrop-blur">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold tracking-tight">Geographic Operations Map</h2>
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium border ${RISK_COLORS[worstRisk]}`}>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium border ${RISK_COLORS[worstRisk]}`}
+            >
               Status: {worstRisk}
             </span>
           </div>
@@ -227,7 +242,7 @@ export function CityHubPage() {
           <div className="relative aspect-square w-full rounded-xl border border-white/5 bg-[#0b0c10] overflow-hidden flex items-center justify-center shadow-inner">
             {/* Grid overlay */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-            
+
             {/* SVG Map details */}
             <svg className="absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg">
               {/* Fake Transit Routes */}
@@ -249,7 +264,11 @@ export function CityHubPage() {
               {venuesStatus.map((v) => {
                 const { x, y } = getMapCoordinates(v.latitude, v.longitude);
                 return (
-                  <g key={v.id} className="cursor-pointer" onClick={() => handleControlVenue(v.activeEventId)}>
+                  <g
+                    key={v.id}
+                    className="cursor-pointer"
+                    onClick={() => handleControlVenue(v.activeEventId)}
+                  >
                     {/* Pulsing ring */}
                     <circle
                       cx={`${x}%`}
@@ -285,10 +304,18 @@ export function CityHubPage() {
             })}
           </div>
           <div className="flex gap-4 text-2xs text-ink-muted justify-center border-t border-white/5 pt-4">
-            <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500"></span> Low</div>
-            <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-500"></span> Medium</div>
-            <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500"></span> High</div>
-            <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-purple-500"></span> Critical</div>
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500"></span> Low
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-amber-500"></span> Medium
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-rose-500"></span> High
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-purple-500"></span> Critical
+            </div>
           </div>
         </div>
 
@@ -305,17 +332,25 @@ export function CityHubPage() {
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-bold text-ink text-base">{v.name}</h3>
-                      <p className="text-2xs text-ink-muted">{v.city}, {v.country}</p>
+                      <p className="text-2xs text-ink-muted">
+                        {v.city}, {v.country}
+                      </p>
                     </div>
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold border ${RISK_COLORS[v.riskLevel]}`}>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold border ${RISK_COLORS[v.riskLevel]}`}
+                    >
                       {v.riskLevel}
                     </span>
                   </div>
 
                   <div className="border-t border-white/5 pt-3 space-y-2">
                     <div>
-                      <div className="text-3xs uppercase tracking-wider text-ink-muted">Active Event</div>
-                      <div className="text-xs font-semibold text-brand-primary truncate">{v.activeEventName}</div>
+                      <div className="text-3xs uppercase tracking-wider text-ink-muted">
+                        Active Event
+                      </div>
+                      <div className="text-xs font-semibold text-brand-primary truncate">
+                        {v.activeEventName}
+                      </div>
                     </div>
 
                     {/* Density Meter */}
@@ -331,8 +366,8 @@ export function CityHubPage() {
                             v.averageDensity > 80
                               ? 'bg-rose-500'
                               : v.averageDensity > 60
-                              ? 'bg-amber-500'
-                              : 'bg-emerald-500'
+                                ? 'bg-amber-500'
+                                : 'bg-emerald-500'
                           }`}
                         ></div>
                       </div>
@@ -346,11 +381,15 @@ export function CityHubPage() {
                     </div>
                     <div className="text-center rounded bg-white/5 p-1.5">
                       <div className="text-3xs uppercase text-ink-muted">Incidents</div>
-                      <div className="text-sm font-bold text-amber-400">{v.activeIncidentsCount}</div>
+                      <div className="text-sm font-bold text-amber-400">
+                        {v.activeIncidentsCount}
+                      </div>
                     </div>
                     <div className="text-center rounded bg-white/5 p-1.5">
                       <div className="text-3xs uppercase text-ink-muted">Capacity</div>
-                      <div className="text-sm font-bold text-ink">{(v.totalCapacity / 1000).toFixed(1)}k</div>
+                      <div className="text-sm font-bold text-ink">
+                        {(v.totalCapacity / 1000).toFixed(1)}k
+                      </div>
                     </div>
                   </div>
                 </div>

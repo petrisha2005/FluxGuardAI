@@ -12,6 +12,7 @@ export interface CrowdZone {
   capacity?: number;
   status?: 'open' | 'closed';
   detourTargetId?: string;
+  type?: 'gate' | 'concourse';
 }
 
 export interface RiskAssessment {

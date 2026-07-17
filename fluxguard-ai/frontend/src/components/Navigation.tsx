@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { api, BackendVenue } from '../services/api';
+import { api } from '../services/api';
+import type { BackendVenue } from '../services/api';
 import { getActiveEventId, setActiveEventId } from '../features/simulation/simulationStore';
 
 export function Navigation() {
@@ -8,7 +9,8 @@ export function Navigation() {
   const [selectedVenueId, setSelectedVenueId] = useState<string>('');
 
   useEffect(() => {
-    api.fetchVenues()
+    api
+      .fetchVenues()
       .then((data) => {
         setVenues(data);
         // Find which venue owns the active event context

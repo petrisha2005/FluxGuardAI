@@ -55,10 +55,10 @@ export function FeedbackPanel() {
 
     try {
       const zoneUuid = getUuidFromSimId(zoneId) || FALLBACK_ZONE_UUID_MAP[zoneId] || zoneId;
-      
+
       // Submit to backend API
       await api.submitFeedback(activeEventId, zoneUuid, rating, comment);
-      
+
       // Closed loop: if rating is low (<=2), trigger local simulation anomaly alert
       if (rating <= 2) {
         registerFeedbackAnomaly(zoneId, rating, comment.trim());
@@ -103,7 +103,8 @@ export function FeedbackPanel() {
           <div className="space-y-1">
             <h3 className="text-sm font-semibold text-ink">Thank you for your feedback!</h3>
             <p className="text-xs text-ink-muted">
-              Your feedback is ingested into our Dynamic Intelligence Layer to optimize crowd routing policies.
+              Your feedback is ingested into our Dynamic Intelligence Layer to optimize crowd
+              routing policies.
             </p>
           </div>
           <Button variant="secondary" size="sm" onClick={() => setSubmitted(false)}>
@@ -208,11 +209,7 @@ export function FeedbackPanel() {
           />
         </div>
 
-        <Button
-          type="submit"
-          className="w-full justify-center select-none"
-          disabled={isSubmitting}
-        >
+        <Button type="submit" className="w-full justify-center select-none" disabled={isSubmitting}>
           {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
         </Button>
       </form>

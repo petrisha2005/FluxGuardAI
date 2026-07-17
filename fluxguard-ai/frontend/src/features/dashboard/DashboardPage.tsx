@@ -187,7 +187,7 @@ export function DashboardPage() {
       <RiskOverview summary={dashboardState.summary} />
       <CrowdRoutingPanel />
       <EvacuationControlPanel />
-      
+
       {/* Tab select controller */}
       <div className="border-b border-white/10 flex gap-6 pb-px">
         <button

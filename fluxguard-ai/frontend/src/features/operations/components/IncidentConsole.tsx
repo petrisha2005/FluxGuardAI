@@ -161,7 +161,7 @@ function IncidentCard({
 }
 
 export function IncidentConsole() {
-  const sim = useSimulationState();
+  useSimulationState();
   const activeEventId = getActiveEventId();
 
   const [incidents, setIncidents] = useState<BackendIncident[]>([]);
@@ -196,6 +196,7 @@ export function IncidentConsole() {
     fetchTickets();
     const interval = setInterval(fetchTickets, 3000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEventId]);
 
   const handleReport = async (e: React.FormEvent) => {

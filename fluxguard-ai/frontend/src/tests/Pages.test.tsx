@@ -147,7 +147,9 @@ describe('VolunteerPage', () => {
     expect(screen.getByText(/Volunteer Command Dashboard/i)).toBeInTheDocument();
     expect(screen.getByText(/My Active Assignments/i)).toBeInTheDocument();
     expect(screen.getByText(/Report Crowd Incident/i)).toBeInTheDocument();
-    expect(screen.getByText(/Monitor turnstile entry speeds and queue lines at North Gate/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Monitor turnstile entry speeds and queue lines at North Gate/i),
+    ).toBeInTheDocument();
   });
 });
 
@@ -185,7 +187,9 @@ describe('CityHubPage', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('heading', { name: /City Command Center/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /City Command Center/i }),
+    ).toBeInTheDocument();
     expect(screen.getAllByText(/Active Venues/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Geographic Operations Map/i)).toBeInTheDocument();
   });

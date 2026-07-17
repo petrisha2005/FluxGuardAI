@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, BackendCamera } from '../../../services/api';
-import { getActiveEventId, getSimIdFromUuid, useSimulationState } from '../../simulation/simulationStore';
+import { api } from '../../../services/api';
+import type { BackendCamera } from '../../../services/api';
+import {
+  getActiveEventId,
+  getSimIdFromUuid,
+  useSimulationState,
+} from '../../simulation/simulationStore';
 
 // Helper component that renders an animated HTML5 canvas representing a live CCTV feed with bounding boxes
 function CctvStreamCanvas({
@@ -62,8 +67,8 @@ function CctvStreamCanvas({
       const boxColor = isCongested
         ? 'rgba(244, 63, 94, 0.8)' // Red
         : density > 50
-        ? 'rgba(251, 191, 36, 0.7)' // Yellow
-        : 'rgba(16, 185, 129, 0.6)'; // Green
+          ? 'rgba(251, 191, 36, 0.7)' // Yellow
+          : 'rgba(16, 185, 129, 0.6)'; // Green
 
       // Update and draw bounding boxes
       targets.forEach((t) => {
@@ -100,19 +105,27 @@ function CctvStreamCanvas({
       ctx.fillStyle = isCongested ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.05)';
       ctx.strokeStyle = isCongested ? 'rgba(244, 63, 94, 0.4)' : 'rgba(255, 255, 255, 0.1)';
       ctx.lineWidth = 1;
-      
+
       // Top corner indicators
       const borderOffset = 10;
       const capLen = 15;
       ctx.beginPath();
       // TL
-      ctx.moveTo(borderOffset, borderOffset + capLen); ctx.lineTo(borderOffset, borderOffset); ctx.lineTo(borderOffset + capLen, borderOffset);
+      ctx.moveTo(borderOffset, borderOffset + capLen);
+      ctx.lineTo(borderOffset, borderOffset);
+      ctx.lineTo(borderOffset + capLen, borderOffset);
       // TR
-      ctx.moveTo(width - borderOffset - capLen, borderOffset); ctx.lineTo(width - borderOffset, borderOffset); ctx.lineTo(width - borderOffset, borderOffset + capLen);
+      ctx.moveTo(width - borderOffset - capLen, borderOffset);
+      ctx.lineTo(width - borderOffset, borderOffset);
+      ctx.lineTo(width - borderOffset, borderOffset + capLen);
       // BL
-      ctx.moveTo(borderOffset, height - borderOffset - capLen); ctx.lineTo(borderOffset, height - borderOffset); ctx.lineTo(borderOffset + capLen, height - borderOffset);
+      ctx.moveTo(borderOffset, height - borderOffset - capLen);
+      ctx.lineTo(borderOffset, height - borderOffset);
+      ctx.lineTo(borderOffset + capLen, height - borderOffset);
       // BR
-      ctx.moveTo(width - borderOffset - capLen, height - borderOffset); ctx.lineTo(width - borderOffset, height - borderOffset); ctx.lineTo(width - borderOffset, height - borderOffset - capLen);
+      ctx.moveTo(width - borderOffset - capLen, height - borderOffset);
+      ctx.lineTo(width - borderOffset, height - borderOffset);
+      ctx.lineTo(width - borderOffset, height - borderOffset - capLen);
       ctx.stroke();
 
       // Congestion alert flashing overlay
@@ -138,12 +151,7 @@ function CctvStreamCanvas({
 
   return (
     <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-white/5 shadow-inner">
-      <canvas
-        ref={canvasRef}
-        width={320}
-        height={180}
-        className="h-full w-full object-cover"
-      />
+      <canvas ref={canvasRef} width={320} height={180} className="h-full w-full object-cover" />
       {/* Overlay Telemetry HUD */}
       <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[8px] font-semibold text-ink backdrop-blur">
         <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse"></span>
@@ -165,7 +173,8 @@ export function CctvFeedGrid() {
   const activeEventId = getActiveEventId();
 
   useEffect(() => {
-    api.fetchCameras(activeEventId)
+    api
+      .fetchCameras(activeEventId)
       .then((data) => {
         setCameras(data);
         setLoading(false);
@@ -189,7 +198,9 @@ export function CctvFeedGrid() {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div>
           <h2 className="text-lg font-bold tracking-tight">Computer Vision CCTV Feeds</h2>
-          <p className="text-xs text-ink-muted">Simulated video streams processing real-time pedestrian coordinates.</p>
+          <p className="text-xs text-ink-muted">
+            Simulated video streams processing real-time pedestrian coordinates.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-ink-muted flex items-center gap-2 cursor-pointer select-none">
@@ -222,7 +233,9 @@ export function CctvFeedGrid() {
               <div className="flex items-start justify-between text-xs">
                 <div>
                   <h3 className="font-bold truncate max-w-[170px]">{camera.name}</h3>
-                  <p className="text-[10px] text-ink-muted uppercase">Accuracy: {(camera.accuracy * 100).toFixed(0)}%</p>
+                  <p className="text-[10px] text-ink-muted uppercase">
+                    Accuracy: {(camera.accuracy * 100).toFixed(0)}%
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-ink-muted">{camera.fps} FPS</span>

@@ -31,7 +31,7 @@ describe('crowdSimulator', () => {
 
   it('correctly models detours when a gate is closed', () => {
     const initialZones = createInitialCrowdZones();
-    
+
     // Close 'gate-c' and detour to 'west-entrance'
     const modifiedZones = initialZones.map((z) => {
       if (z.id === 'gate-c') {
@@ -41,25 +41,32 @@ describe('crowdSimulator', () => {
     });
 
     const nextZones = simulateNextCrowdZones(modifiedZones, 1);
-    
-    const nextGateC = nextZones.find((z) => z.id === 'gate-c')!;
-    const initialWest = initialZones.find((z) => z.id === 'west-entrance')!;
-    const nextWest = nextZones.find((z) => z.id === 'west-entrance')!;
+
+    const nextGateC = nextZones.find((z) => z.id === 'gate-c');
+    const initialWest = initialZones.find((z) => z.id === 'west-entrance');
+    const nextWest = nextZones.find((z) => z.id === 'west-entrance');
+
+    expect(nextGateC).toBeDefined();
+    expect(initialWest).toBeDefined();
+    expect(nextWest).toBeDefined();
 
     // Gate C entry rate should be 0 because it is closed
-    expect(nextGateC.entryRate).toBe(0);
+    expect(nextGateC?.entryRate).toBe(0);
     // West Entrance queue should increase due to redirected detour flow
-    expect(nextWest.queueLength).toBeGreaterThan(initialWest.queueLength);
+    expect(nextWest?.queueLength).toBeGreaterThan(initialWest?.queueLength ?? 0);
   });
 
   it('zeroes arrivals and accelerates exits when evacuation is active', () => {
     const initialZones = createInitialCrowdZones();
     const nextZones = simulateNextCrowdZones(initialZones, 1, true);
 
-    const nextGateC = nextZones.find((z) => z.id === 'gate-c')!;
-    const nextNorth = nextZones.find((z) => z.id === 'north-gate')!;
+    const nextGateC = nextZones.find((z) => z.id === 'gate-c');
+    const nextNorth = nextZones.find((z) => z.id === 'north-gate');
 
-    expect(nextGateC.entryRate).toBe(0);
-    expect(nextNorth.entryRate).toBe(0);
+    expect(nextGateC).toBeDefined();
+    expect(nextNorth).toBeDefined();
+
+    expect(nextGateC?.entryRate).toBe(0);
+    expect(nextNorth?.entryRate).toBe(0);
   });
 });

@@ -32,14 +32,12 @@ export const mockBackendCamera = {
 export const mockBackendRoutingRecommendation = {
   sourceZoneId: '00000000-0000-0000-0000-000000000003',
   targetZoneId: '00000000-0000-0000-0000-000000000004',
-  reason: 'High queue backlog detected at Gate C. Reroute incoming flow to West Entrance to optimize clearance times.',
+  reason:
+    'High queue backlog detected at Gate C. Reroute incoming flow to West Entrance to optimize clearance times.',
   delayReductionMinutes: 12,
   confidence: 0.94,
   reliefTimeMinutes: 8,
 };
-
-
-
 
 export const mockBackendZones = [
   {

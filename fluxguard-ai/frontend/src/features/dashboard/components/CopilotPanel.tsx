@@ -23,7 +23,7 @@ const SUGGESTIONS = [
 ];
 
 export function CopilotPanel({ className }: { className?: string }) {
-  const sim = useSimulationState();
+  useSimulationState();
   const activeEventId = getActiveEventId();
 
   const [messages, setMessages] = useState<ChatMessage[]>([

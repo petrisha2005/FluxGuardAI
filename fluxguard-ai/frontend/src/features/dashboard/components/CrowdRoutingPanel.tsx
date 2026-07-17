@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api, BackendRoutingRecommendation } from '../../../services/api';
+import { api } from '../../../services/api';
+import type { BackendRoutingRecommendation } from '../../../services/api';
 import {
   getActiveEventId,
   getSimIdFromUuid,
@@ -25,6 +26,7 @@ export function CrowdRoutingPanel() {
 
   useEffect(() => {
     fetchRecommendations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEventId, sim.tick]);
 
   const handleApplyDetour = (rec: BackendRoutingRecommendation) => {
@@ -35,7 +37,7 @@ export function CrowdRoutingPanel() {
       // Reprogram the simulator via the global state selectors
       setZoneStatus(srcSimId, 'closed');
       setZoneDetour(srcSimId, tgtSimId);
-      
+
       const key = `${rec.sourceZoneId}-${rec.targetZoneId}`;
       setAppliedRoutes((prev) => {
         const next = new Set(prev);
@@ -74,23 +76,31 @@ export function CrowdRoutingPanel() {
                   </span>
                 )}
               </div>
-              <p className="text-sm font-medium text-ink leading-relaxed">
-                {rec.reason}
-              </p>
+              <p className="text-sm font-medium text-ink leading-relaxed">{rec.reason}</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-4 border-t border-white/5 pt-4 md:border-t-0 md:pt-0">
               <div className="grid grid-cols-3 gap-3 text-center min-w-[200px]">
                 <div className="rounded-lg bg-white/5 px-2 py-1.5">
-                  <div className="text-[9px] uppercase tracking-wider text-ink-muted">Expected Delay</div>
-                  <div className="text-xs font-bold text-emerald-400">-{rec.delayReductionMinutes} min</div>
+                  <div className="text-[9px] uppercase tracking-wider text-ink-muted">
+                    Expected Delay
+                  </div>
+                  <div className="text-xs font-bold text-emerald-400">
+                    -{rec.delayReductionMinutes} min
+                  </div>
                 </div>
                 <div className="rounded-lg bg-white/5 px-2 py-1.5">
-                  <div className="text-[9px] uppercase tracking-wider text-ink-muted">Confidence</div>
-                  <div className="text-xs font-bold text-ink">{(rec.confidence * 100).toFixed(0)}%</div>
+                  <div className="text-[9px] uppercase tracking-wider text-ink-muted">
+                    Confidence
+                  </div>
+                  <div className="text-xs font-bold text-ink">
+                    {(rec.confidence * 100).toFixed(0)}%
+                  </div>
                 </div>
                 <div className="rounded-lg bg-white/5 px-2 py-1.5">
-                  <div className="text-[9px] uppercase tracking-wider text-ink-muted">Relief Time</div>
+                  <div className="text-[9px] uppercase tracking-wider text-ink-muted">
+                    Relief Time
+                  </div>
                   <div className="text-xs font-bold text-ink">{rec.reliefTimeMinutes} min</div>
                 </div>
               </div>

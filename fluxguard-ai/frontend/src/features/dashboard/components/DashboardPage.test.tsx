@@ -74,9 +74,7 @@ describe('DashboardPage', () => {
   it('renders routing panel recommendations and handles apply actions', async () => {
     render(<DashboardPage />);
 
-    expect(
-      await screen.findByText(/AI Dynamic Routing Suggestion/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/AI Dynamic Routing Suggestion/i)).toBeInTheDocument();
     expect(screen.getByText(/High queue backlog detected at Gate C/i)).toBeInTheDocument();
 
     const applyButton = screen.getByRole('button', { name: /Apply AI Detour Route/i });

@@ -87,7 +87,7 @@ export function VolunteerPage() {
   useEffect(() => {
     localStorage.setItem(
       'fluxguard-volunteer-completed-tasks',
-      JSON.stringify(Array.from(completedTaskIds))
+      JSON.stringify(Array.from(completedTaskIds)),
     );
   }, [completedTaskIds]);
 
@@ -98,7 +98,13 @@ export function VolunteerPage() {
     let successCount = 0;
     for (const item of currentQueue) {
       try {
-        await api.createIncident(activeEventId, item.zoneId, item.type, item.severity, item.description);
+        await api.createIncident(
+          activeEventId,
+          item.zoneId,
+          item.type,
+          item.severity,
+          item.description,
+        );
         successCount++;
       } catch (err) {
         console.error('Failed to sync offline incident report', err);
@@ -270,7 +276,8 @@ export function VolunteerPage() {
           <div className="flex items-center gap-2">
             <span>🔄</span>
             <span>
-              Connection restored! Successfully synchronized {syncedCount} queued reports with Command Center.
+              Connection restored! Successfully synchronized {syncedCount} queued reports with
+              Command Center.
             </span>
           </div>
           <button
@@ -345,13 +352,17 @@ export function VolunteerPage() {
             <form onSubmit={handleReport} className="space-y-4">
               {isOffline && (
                 <div className="rounded-lg border border-amber-500/10 bg-amber-500/5 p-3 text-[10px] text-amber-400 font-semibold leading-relaxed">
-                  ⚠️ Device is offline. Observations reported now will be stored locally in queue ({offlineQueue.length} pending) and auto-synced upon reconnecting.
+                  ⚠️ Device is offline. Observations reported now will be stored locally in queue (
+                  {offlineQueue.length} pending) and auto-synced upon reconnecting.
                 </div>
               )}
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1">
-                  <label htmlFor="volt-type" className="text-[10px] font-bold text-ink-muted uppercase">
+                  <label
+                    htmlFor="volt-type"
+                    className="text-[10px] font-bold text-ink-muted uppercase"
+                  >
                     Type
                   </label>
                   <select
@@ -368,7 +379,10 @@ export function VolunteerPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="volt-location" className="text-[10px] font-bold text-ink-muted uppercase">
+                  <label
+                    htmlFor="volt-location"
+                    className="text-[10px] font-bold text-ink-muted uppercase"
+                  >
                     Location
                   </label>
                   <select
@@ -386,7 +400,10 @@ export function VolunteerPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="volt-severity" className="text-[10px] font-bold text-ink-muted uppercase">
+                  <label
+                    htmlFor="volt-severity"
+                    className="text-[10px] font-bold text-ink-muted uppercase"
+                  >
                     Severity
                   </label>
                   <select
@@ -403,7 +420,10 @@ export function VolunteerPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="volt-description" className="text-[10px] font-bold text-ink-muted uppercase">
+                <label
+                  htmlFor="volt-description"
+                  className="text-[10px] font-bold text-ink-muted uppercase"
+                >
                   Details / Notes
                 </label>
                 <textarea
@@ -421,7 +441,11 @@ export function VolunteerPage() {
                 disabled={isSubmitting}
                 className="w-full py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-black text-xs font-bold transition-all"
               >
-                {isSubmitting ? 'Reporting...' : isOffline ? 'Queue Offline Report' : 'Send Report to Command'}
+                {isSubmitting
+                  ? 'Reporting...'
+                  : isOffline
+                    ? 'Queue Offline Report'
+                    : 'Send Report to Command'}
               </button>
             </form>
           </Panel>
@@ -432,7 +456,9 @@ export function VolunteerPage() {
           <Panel eyebrow="Command Center Feed" title="Recent Field Logs">
             <div className="divide-y divide-white/5 space-y-4">
               {incidents.length === 0 ? (
-                <div className="py-8 text-center text-xs text-ink-muted">No incidents reported yet.</div>
+                <div className="py-8 text-center text-xs text-ink-muted">
+                  No incidents reported yet.
+                </div>
               ) : (
                 incidents.map((incident) => (
                   <div key={incident.id} className="pt-4 first:pt-0 flex flex-col gap-2">

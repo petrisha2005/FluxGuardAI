@@ -7,7 +7,7 @@ import { api } from '@/services/api';
 import { useSimulationState, getActiveEventId } from '@/features/simulation/simulationStore';
 
 export function DashboardHeader() {
-  const sim = useSimulationState();
+  useSimulationState();
   const activeEventId = getActiveEventId();
 
   const [integrations, setIntegrations] = useState<{

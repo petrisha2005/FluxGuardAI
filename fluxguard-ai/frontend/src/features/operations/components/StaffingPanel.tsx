@@ -24,7 +24,7 @@ const ZONE_LABELS: Record<string, string> = {
 };
 
 export function StaffingPanel() {
-  const sim = useSimulationState();
+  useSimulationState();
   const activeEventId = getActiveEventId();
 
   const [data, setData] = useState<BackendStaffingStatus | null>(null);
@@ -43,6 +43,7 @@ export function StaffingPanel() {
     fetchStaffing();
     const interval = setInterval(fetchStaffing, 4000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEventId]);
 
   const handleRedeploy = async (suggestion: BackendStaffingSuggestion, index: number) => {

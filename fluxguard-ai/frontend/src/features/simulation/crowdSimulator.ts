@@ -98,9 +98,13 @@ export function createInitialCrowdZones(): CrowdZone[] {
   });
 }
 
-export function simulateNextCrowdZones(previousZones: CrowdZone[], tick: number, isEvacuationActive?: boolean): CrowdZone[] {
+export function simulateNextCrowdZones(
+  previousZones: CrowdZone[],
+  tick: number,
+  isEvacuationActive?: boolean,
+): CrowdZone[] {
   const timestamp = getSimulationTimestamp(tick);
-  
+
   // Clone previous zones to compile updates
   const nextZones: CrowdZone[] = previousZones.map((z) => ({
     ...z,
@@ -131,7 +135,9 @@ export function simulateNextCrowdZones(previousZones: CrowdZone[], tick: number,
         const detourTarget = nextZones.find((t) => t.id === zone.detourTargetId);
         if (detourTarget) {
           // Reroute 60% of arrivals to the detour target
-          detourTarget.queueLength = round(clamp(detourTarget.queueLength + baseArrival * 0.6, 0, 800));
+          detourTarget.queueLength = round(
+            clamp(detourTarget.queueLength + baseArrival * 0.6, 0, 800),
+          );
           zone.queueLength = round(clamp(zone.queueLength + baseArrival * 0.4, 0, 800));
         } else {
           zone.queueLength = round(clamp(zone.queueLength + baseArrival, 0, 800));
@@ -146,12 +152,15 @@ export function simulateNextCrowdZones(previousZones: CrowdZone[], tick: number,
 
   // Step 2: Flow along links
   const activeLinks = ZONE_LINKS.filter(
-    (link) => nextZones.some((z) => z.id === link.source) && nextZones.some((z) => z.id === link.target)
+    (link) =>
+      nextZones.some((z) => z.id === link.source) && nextZones.some((z) => z.id === link.target),
   );
 
   activeLinks.forEach((link) => {
-    const src = nextZones.find((z) => z.id === link.source)!;
-    const tgt = nextZones.find((z) => z.id === link.target)!;
+    const src = nextZones.find((z) => z.id === link.source);
+    const tgt = nextZones.find((z) => z.id === link.target);
+
+    if (!src || !tgt) return;
 
     if (src.status === 'closed' || tgt.status === 'closed') {
       return;
@@ -161,14 +170,22 @@ export function simulateNextCrowdZones(previousZones: CrowdZone[], tick: number,
       // In evacuation, flow is reversed (concourse -> gate exit)
       if (src.type === 'gate') {
         const peopleInConcourse = (tgt.density * (tgt.capacity || 5000)) / 100;
-        const flow = round(clamp(Math.min(peopleInConcourse * 0.35 + 30, link.maxCapacity * 2.5), 0, peopleInConcourse));
+        const flow = round(
+          clamp(
+            Math.min(peopleInConcourse * 0.35 + 30, link.maxCapacity * 2.5),
+            0,
+            peopleInConcourse,
+          ),
+        );
 
         tgt.exitRate = (tgt.exitRate || 0) + flow;
         src.entryRate = (src.entryRate || 0) + flow;
         src.exitRate = (src.exitRate || 0) + flow; // Drains to safety out of gate
       } else {
         const peopleCount = (src.density * (src.capacity || 2000)) / 100;
-        const flow = round(clamp(Math.min(peopleCount * 0.35 + 25, link.maxCapacity * 2.0), 0, peopleCount));
+        const flow = round(
+          clamp(Math.min(peopleCount * 0.35 + 25, link.maxCapacity * 2.0), 0, peopleCount),
+        );
 
         src.exitRate = (src.exitRate || 0) + flow;
         tgt.entryRate = (tgt.entryRate || 0) + flow;
@@ -206,7 +223,7 @@ export function simulateNextCrowdZones(previousZones: CrowdZone[], tick: number,
     if (zone.type === 'concourse' && !hasOutgoingLink) {
       const exitShift = zoneWave(zone.id, tick, 2) * 8;
       let baseExit = round(clamp(40 + exitShift, 15, 95));
-      
+
       if (isEvacuationActive) {
         baseExit = baseExit * 2.5; // High outflow evacuation clearance
       }
@@ -227,7 +244,7 @@ export function simulateNextCrowdZones(previousZones: CrowdZone[], tick: number,
         pressure = -zone.exitRate;
       } else {
         const baseArrival = zone.entryRate; // Stored baseArrival from Step 1
-        const flow = zone.exitRate;         // Stored flow from Step 2
+        const flow = zone.exitRate; // Stored flow from Step 2
         pressure = baseArrival - flow;
       }
 
@@ -236,7 +253,8 @@ export function simulateNextCrowdZones(previousZones: CrowdZone[], tick: number,
     } else {
       pressure = zone.entryRate - zone.exitRate;
     }
-    const densityDelta = pressure * 0.08 + (isEvacuationActive ? 0 : zoneWave(zone.id, tick, 4) * 2.4);
+    const densityDelta =
+      pressure * 0.08 + (isEvacuationActive ? 0 : zoneWave(zone.id, tick, 4) * 2.4);
     zone.density = round(clamp(zone.density + densityDelta, 0, 98));
   });
 
@@ -244,14 +262,18 @@ export function simulateNextCrowdZones(previousZones: CrowdZone[], tick: number,
   return nextZones.map((zone) => {
     // If evacuation is active, force risks to elevated postures
     const assessment = assessZoneRisk(zone, timestamp);
-    const resolvedRisk = isEvacuationActive 
-      ? (zone.density > 50 ? 'critical' : zone.density > 20 ? 'high' : 'medium')
+    const resolvedRisk = isEvacuationActive
+      ? zone.density > 50
+        ? ('CRITICAL' as const)
+        : zone.density > 20
+          ? ('HIGH' as const)
+          : ('MEDIUM' as const)
       : assessment.risk;
 
     return {
       ...zone,
       lastUpdated: timestamp,
-      risk: resolvedRisk as any,
+      risk: resolvedRisk,
     };
   });
 }

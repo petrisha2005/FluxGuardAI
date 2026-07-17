@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/services/api';
+import type { BackendEvent } from '@/services/api';
 import { getActiveEventId, useSimulationState } from '@/features/simulation/simulationStore';
 
 interface SignageGuidance {
@@ -20,28 +21,30 @@ const SIGNAGE_TRANSLATIONS: Record<string, Record<string, string>> = {
   fr: {
     'Live Stadium Signage Console': 'Console de signalisation du stade en direct',
     'Simulated active LED display boards located throughout Lucusa Stadium. Real-time approved safety instructions are pushed instantly to these displays.':
-      'Simulateur de panneaux d\'affichage LED actifs situés dans le stade. Les consignes de sécurité approuvées en temps réel sont diffusées instantanément.',
+      "Simulateur de panneaux d'affichage LED actifs situés dans le stade. Les consignes de sécurité approuvées en temps réel sont diffusées instantanément.",
     'Safety Broadcast Active': 'Diffusion de sécurité active',
     'Normal Operations': 'Opérations normales',
     'Safety Directives': 'Directives de sécurité',
-    'Language': 'Langue',
-    'Display ID': 'ID de l\'affichage',
-    'Expires': 'Expire à',
+    Language: 'Langue',
+    'Display ID': "ID de l'affichage",
+    Expires: 'Expire à',
     'Status: Steady': 'Statut: Stable',
     'Clear Test': 'Effacer le test',
-    'Trigger Mock Alert': 'Déclencher l\'alerte test',
+    'Trigger Mock Alert': "Déclencher l'alerte test",
     'Test Panel': 'Panneau de test de diffusion',
-    'Select Target Screen': 'Sélectionner l\'écran cible',
+    'Select Target Screen': "Sélectionner l'écran cible",
     'Operations running within safe capacity limits. Maintain standard flow rates.':
       'Opérations dans les limites de capacité sûres. Maintenir les débits de flux standard.',
     // Directives
     'Reroute traffic from congested areas': 'Rediriger le trafic des zones encombrées',
     'High density warning at East Concourse': 'Alerte haute densité au hall Est',
     'North Gate capacity warning': 'Avertissement de capacité à la porte Nord',
-    'Gate C bottleneck detected': 'Goulot d\'étranglement détecté à la porte C',
-    'Detour Gate C flow to West Entrance': 'Détourner le flux de la porte C vers l\'entrée Ouest',
-    'Move additional stewards to Gate C': 'Déplacer des agents de sécurité supplémentaires vers la porte C',
-    'Reroute incoming Gate C arrivals to West Entrance': 'Rediriger les arrivées de la porte C vers l\'entrée Ouest',
+    'Gate C bottleneck detected': "Goulot d'étranglement detected à la porte C",
+    'Detour Gate C flow to West Entrance': "Détourner le flux de la porte C vers l'entrée Ouest",
+    'Move additional stewards to Gate C':
+      'Déplacer des agents de seguridad adicionales vers la porte C',
+    'Reroute incoming Gate C arrivals to West Entrance':
+      "Rediriger les arrivées de la porte C vers l'entrée Ouest",
   },
   es: {
     'Live Stadium Signage Console': 'Consola de señalización del estadio en vivo',
@@ -50,50 +53,52 @@ const SIGNAGE_TRANSLATIONS: Record<string, Record<string, string>> = {
     'Safety Broadcast Active': 'Difusión de seguridad activa',
     'Normal Operations': 'Operaciones normales',
     'Safety Directives': 'Directivas de seguridad',
-    'Language': 'Idioma',
-    'Display ID': 'ID de pantalla',
-    'Expires': 'Expira a las',
+    Language: 'Idioma',
+    'Display ID': 'ID de la pantalla',
+    Expires: 'Expira a',
     'Status: Steady': 'Estado: Estable',
     'Clear Test': 'Limpiar prueba',
-    'Trigger Mock Alert': 'Activar alerta simulada',
-    'Test Panel': 'Panel de prueba de transmisión',
+    'Trigger Mock Alert': 'Activar alerta de prueba',
+    'Test Panel': 'Panel de prueba de difusión',
     'Select Target Screen': 'Seleccionar pantalla de destino',
     'Operations running within safe capacity limits. Maintain standard flow rates.':
-      'Operaciones dentro de límites seguros de capacidad. Mantener flujos estándar.',
+      'Operaciones ejecutándose dentro de límites de capacidad seguros. Mantener tasas de flujo estándar.',
     // Directives
-    'Reroute traffic from congested areas': 'Desviar tráfico de áreas congestionadas',
-    'High density warning at East Concourse': 'Advertencia de alta densidad en el vestíbulo Este',
-    'North Gate capacity warning': 'Advertencia de capacidad en la puerta Norte',
-    'Gate C bottleneck detected': 'Cuello de botella detectado en la puerta C',
-    'Detour Gate C flow to West Entrance': 'Desviar el flujo de la puerta C a la entrada Oeste',
-    'Move additional stewards to Gate C': 'Mover personal de seguridad adicional a la puerta C',
-    'Reroute incoming Gate C arrivals to West Entrance': 'Redirigir las llegadas de la puerta C a la entrada Oeste',
+    'Reroute traffic from congested areas': 'Redirigir tráfico de áreas congestionadas',
+    'High density warning at East Concourse': 'Advertencia de alta densidad en Concourse Este',
+    'North Gate capacity warning': 'Advertencia de capacidad de Puerta Norte',
+    'Gate C bottleneck detected': 'Embotellamiento detectado en Puerta C',
+    'Detour Gate C flow to West Entrance': 'Desviar flujo de Puerta C a Entrada Oeste',
+    'Move additional stewards to Gate C': 'Mover personal de seguridad adicional a Puerta C',
+    'Reroute incoming Gate C arrivals to West Entrance':
+      'Redirigir llegadas entrantes de Puerta C a Entrada Oeste',
   },
   de: {
     'Live Stadium Signage Console': 'Live-Stadionbeschilderungskonsole',
     'Simulated active LED display boards located throughout Lucusa Stadium. Real-time approved safety instructions are pushed instantly to these displays.':
-      'Simulierte aktive LED-Anzeigetafeln im gesamten Stadion. Freigegebene Sicherheitsanweisungen werden in Echtzeit auf diese Anzeigen übertragen.',
+      'Simulierte aktive LED-Anzeigetafeln im gesamten Lucusa-Stadion. Approved Sicherheitsanweisungen werden in Echtzeit gesendet.',
     'Safety Broadcast Active': 'Sicherheitsübertragung aktiv',
     'Normal Operations': 'Normaler Betrieb',
     'Safety Directives': 'Sicherheitsrichtlinien',
-    'Language': 'Sprache',
+    Language: 'Sprache',
     'Display ID': 'Anzeige-ID',
-    'Expires': 'Gültig bis',
+    Expires: 'Läuft ab am',
     'Status: Steady': 'Status: Stabil',
     'Clear Test': 'Test löschen',
     'Trigger Mock Alert': 'Testalarm auslösen',
-    'Test Panel': 'Übertragungstestfeld',
+    'Test Panel': 'Übertragungstestpanel',
     'Select Target Screen': 'Zielbildschirm auswählen',
     'Operations running within safe capacity limits. Maintain standard flow rates.':
-      'Betrieb innerhalb sicherer Kapazitätsgrenzen. Standard-Flussraten beibehalten.',
+      'Betrieb läuft in sicheren Kapazitätsgrenzen. Normale Durchflussraten beibehalten.',
     // Directives
-    'Reroute traffic from congested areas': 'Verkehr aus überlasteten Bereichen umleiten',
-    'High density warning at East Concourse': 'Warnung vor hoher Dichte im östlichen Korridor',
-    'North Gate capacity warning': 'Kapazitätswarnung am Nordtor',
+    'Reroute traffic from congested areas': 'Verkehr von überlasteten Bereichen umleiten',
+    'High density warning at East Concourse': 'Warnung vor hoher Dichte im Ost-Korridor',
+    'North Gate capacity warning': 'Nordtor-Kapazitätswarnung',
     'Gate C bottleneck detected': 'Engpass an Tor C erkannt',
-    'Detour Gate C flow to West Entrance': 'Leiten Sie den Fluss von Tor C zum Westeingang um',
+    'Detour Gate C flow to West Entrance': 'Verkehr von Tor C zum Westeingang umleiten',
     'Move additional stewards to Gate C': 'Zusätzliche Ordner zu Tor C verlegen',
-    'Reroute incoming Gate C arrivals to West Entrance': 'Leiten Sie ankommende Besucher von Tor C zum Westeingang um',
+    'Reroute incoming Gate C arrivals to West Entrance':
+      'Leiten Sie ankommende Besucher von Tor C zum Westeingang um',
   },
 };
 
@@ -102,10 +107,26 @@ export function SignagePage() {
   const activeEventId = getActiveEventId();
   const [approvedDirectives, setApprovedDirectives] = useState<SignageGuidance[]>([]);
   const [lang, setLang] = useState<'en' | 'fr' | 'es' | 'de'>('en');
+  const [activeEvent, setActiveEvent] = useState<BackendEvent | null>(null);
 
   // Interactive Test Panel State
   const [testTargetZone, setTestTargetZone] = useState<string>('');
   const [testDirective, setTestDirective] = useState<SignageGuidance | null>(null);
+
+  useEffect(() => {
+    const fetchEventInfo = async () => {
+      try {
+        const events = await api.fetchEvents();
+        const currentEvent = events.find((e) => e.id === activeEventId);
+        if (currentEvent) {
+          setActiveEvent(currentEvent);
+        }
+      } catch (err) {
+        console.warn('Failed to load event details', err);
+      }
+    };
+    fetchEventInfo();
+  }, [activeEventId]);
 
   useEffect(() => {
     const loadDirectives = async () => {
@@ -175,7 +196,7 @@ export function SignagePage() {
   }
 
   // Generate dynamic zones list from simulation state
-  const activeVenueName = state.activeEvent?.name.split(' - ')[0] || 'Venue';
+  const activeVenueName = activeEvent?.name.split(' - ')[0] || 'Venue';
   const zonesList = state.zones.map((zone) => ({
     id: zone.id,
     label: `${zone.name} - Screen Display`,
@@ -216,21 +237,25 @@ export function SignagePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/5 pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">{t('Live Stadium Signage Console')}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">
+            {t('Live Stadium Signage Console')}
+          </h1>
           <p className="mt-2 text-sm text-ink-muted leading-relaxed max-w-2xl">
             {t(
-              'Simulated active LED display boards located throughout Lucusa Stadium. Real-time approved safety instructions are pushed instantly to these displays.'
+              'Simulated active LED display boards located throughout Lucusa Stadium. Real-time approved safety instructions are pushed instantly to these displays.',
             )}
           </p>
         </div>
 
         {/* Multi-language Selector */}
         <div className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/5 px-3 py-2">
-          <span className="text-xs text-ink-muted font-bold font-mono uppercase">{t('Language')}:</span>
+          <span className="text-xs text-ink-muted font-bold font-mono uppercase">
+            {t('Language')}:
+          </span>
           <select
             aria-label="Language Selector"
             value={lang}
-            onChange={(e) => setLang(e.target.value as any)}
+            onChange={(e) => setLang(e.target.value as 'en' | 'fr' | 'es' | 'de')}
             className="bg-transparent border-0 text-xs font-bold text-brand-primary p-0 pr-6 focus:ring-0 cursor-pointer"
           >
             <option value="en">English (EN)</option>
@@ -245,7 +270,9 @@ export function SignagePage() {
       <div className="rounded-2xl border border-white/5 bg-surface-elevated/20 p-5 backdrop-blur flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
           <h3 className="text-sm font-bold text-ink">🛠️ {t('Test Panel')}</h3>
-          <p className="text-xs text-ink-muted">Simulate and override safety messages on a chosen LED monitor.</p>
+          <p className="text-xs text-ink-muted">
+            Simulate and override safety messages on a chosen LED monitor.
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
@@ -357,16 +384,22 @@ export function SignagePage() {
                       <span className="text-emerald-400 text-sm font-bold">✓</span>
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-ink">{getWelcomeText(activeVenueName)}</h3>
+                      <h3 className="text-sm font-bold text-ink">
+                        {getWelcomeText(activeVenueName)}
+                      </h3>
                       <p className="text-xs text-ink-muted mt-1 max-w-[280px]">
-                        {t('Operations running within safe capacity limits. Maintain standard flow rates.')}
+                        {t(
+                          'Operations running within safe capacity limits. Maintain standard flow rates.',
+                        )}
                       </p>
                     </div>
                   </div>
                 )}
 
                 <div className="mt-6 border-t border-white/5 pt-4 flex items-center justify-between text-[10px] text-ink-muted font-mono">
-                  <span>{t('Display ID')}: {z.id.toUpperCase()}-LED</span>
+                  <span>
+                    {t('Display ID')}: {z.id.toUpperCase()}-LED
+                  </span>
                   <span>
                     {hasGuidance && activeGuidance.expiresAt
                       ? `${t('Expires')}: ${new Date(activeGuidance.expiresAt).toLocaleTimeString()}`
