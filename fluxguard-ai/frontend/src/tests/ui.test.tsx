@@ -13,6 +13,11 @@ import {
   Spinner,
   StatusIndicator,
   Tooltip,
+  StatusBadge,
+  LoadingSkeleton,
+  EmptyState,
+  ErrorState,
+  AIDecisionCard,
 } from '@/components/ui';
 
 describe('UI design system foundations', () => {
@@ -114,5 +119,57 @@ describe('UI design system foundations', () => {
 
     expect(onBlur).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('renders StatusBadge with specific variants', () => {
+    render(<StatusBadge variant="success">Active Status</StatusBadge>);
+    expect(screen.getByText('Active Status')).toBeInTheDocument();
+  });
+
+  it('renders LoadingSkeleton variations', () => {
+    render(<LoadingSkeleton variant="table" count={2} />);
+    expect(screen.getByRole('status', { name: /loading table content/i })).toBeInTheDocument();
+  });
+
+  it('renders EmptyState messages with action trigger', () => {
+    render(
+      <EmptyState
+        title="Empty Logs"
+        description="No events found."
+        action={<button>Create Event</button>}
+      />,
+    );
+    expect(screen.getByText('Empty Logs')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create event/i })).toBeInTheDocument();
+  });
+
+  it('renders ErrorState with retry trigger capability', () => {
+    const handleRetry = vi.fn();
+    render(
+      <ErrorState
+        title="Connection Timed Out"
+        description="Failed to sync logs."
+        onRetry={handleRetry}
+      />,
+    );
+    expect(screen.getByText('Connection Timed Out')).toBeInTheDocument();
+    screen.getByRole('button', { name: /retry connection/i }).click();
+    expect(handleRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders AIDecisionCard with approval constraints', () => {
+    render(
+      <AIDecisionCard
+        decisionId="dec-test"
+        agentName="Test Agent"
+        recommendation="Reroute West"
+        confidence={90}
+        reason="Heavy congestion"
+        expectedImpact="Reduce backlog"
+        humanApprovalRequired={true}
+      />,
+    );
+    expect(screen.getByText('Reroute West')).toBeInTheDocument();
+    expect(screen.getByText(/Test Agent/i)).toBeInTheDocument();
   });
 });

@@ -98,8 +98,19 @@ export function StaffingPanel() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 8, right: 18, bottom: 8, left: -20 }}>
               <CartesianGrid stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
-              <XAxis dataKey="name" stroke="#64748b" tickLine={false} axisLine={false} className="text-[10px] font-mono" />
-              <YAxis stroke="#64748b" tickLine={false} axisLine={false} className="text-[10px] font-mono" />
+              <XAxis
+                dataKey="name"
+                stroke="#64748b"
+                tickLine={false}
+                axisLine={false}
+                className="text-[10px] font-mono"
+              />
+              <YAxis
+                stroke="#64748b"
+                tickLine={false}
+                axisLine={false}
+                className="text-[10px] font-mono"
+              />
               <Tooltip
                 contentStyle={{
                   background: '#111827',
@@ -110,7 +121,12 @@ export function StaffingPanel() {
                   fontSize: '11px',
                 }}
               />
-              <Legend verticalAlign="top" height={36} iconType="circle" className="text-[11px] font-mono" />
+              <Legend
+                verticalAlign="top"
+                height={36}
+                iconType="circle"
+                className="text-[11px] font-mono"
+              />
               <Bar name="Current Stewards" dataKey="current" fill="#38bdf8" radius={[2, 2, 0, 0]} />
               <Bar
                 name="Recommended Allocation"
@@ -173,7 +189,9 @@ export function StaffingPanel() {
                           {ZONE_LABELS[suggestion.fromZoneId]} → {ZONE_LABELS[suggestion.toZoneId]}
                         </span>
                       </div>
-                      <p className="text-xs text-ink-muted leading-relaxed font-mono">{suggestion.reason}</p>
+                      <p className="text-xs text-ink-muted leading-relaxed font-mono">
+                        {suggestion.reason}
+                      </p>
                     </div>
                     <button
                       onClick={() => handleRedeploy(suggestion, index)}

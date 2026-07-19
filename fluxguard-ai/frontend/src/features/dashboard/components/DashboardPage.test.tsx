@@ -1,19 +1,22 @@
 import { render, screen, within } from '@testing-library/react';
 import { act } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 import { resetSimulation, updateSimulation } from '@/features/simulation/simulationStore';
 import { setupFetchMocks } from '@/tests/testMocks';
 import { DashboardPage } from '../DashboardPage';
 
 describe('DashboardPage', () => {
+  const renderWithRouter = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
+
   beforeEach(() => {
     setupFetchMocks();
     resetSimulation();
   });
 
   it('renders the operations command center with simulated data labels', async () => {
-    render(<DashboardPage />);
+    renderWithRouter(<DashboardPage />);
 
     expect(screen.getByRole('heading', { name: /operations command center/i })).toBeInTheDocument();
     expect(screen.getByText(/enriched operations/i)).toBeInTheDocument();
@@ -21,7 +24,7 @@ describe('DashboardPage', () => {
   });
 
   it('displays all configured stadium zones and density values', () => {
-    render(<DashboardPage />);
+    renderWithRouter(<DashboardPage />);
 
     const zonePanel = screen.getByLabelText(/crowd zone status panel/i);
 
@@ -34,7 +37,7 @@ describe('DashboardPage', () => {
   });
 
   it('exposes risk states with accessible labels', () => {
-    render(<DashboardPage />);
+    renderWithRouter(<DashboardPage />);
 
     expect(
       screen.getByRole('status', { name: /North Gate risk state is amber/i }),
@@ -46,7 +49,7 @@ describe('DashboardPage', () => {
   });
 
   it('updates dashboard values when the simulation advances', () => {
-    render(<DashboardPage />);
+    renderWithRouter(<DashboardPage />);
 
     expect(screen.getByLabelText(/Peak Density: 86%/i)).toBeInTheDocument();
 
@@ -58,7 +61,7 @@ describe('DashboardPage', () => {
   });
 
   it('toggles to CCTV feeds view when tab is clicked', async () => {
-    render(<DashboardPage />);
+    renderWithRouter(<DashboardPage />);
 
     const cctvTab = screen.getByRole('button', { name: /CCTV Video Feeds/i });
     expect(cctvTab).toBeInTheDocument();
@@ -72,7 +75,7 @@ describe('DashboardPage', () => {
   });
 
   it('renders routing panel recommendations and handles apply actions', async () => {
-    render(<DashboardPage />);
+    renderWithRouter(<DashboardPage />);
 
     expect(await screen.findByText(/AI Dynamic Routing Suggestion/i)).toBeInTheDocument();
     expect(screen.getByText(/High queue backlog detected at Gate C/i)).toBeInTheDocument();
@@ -88,7 +91,7 @@ describe('DashboardPage', () => {
   });
 
   it('handles emergency evacuation trigger and cancel states', () => {
-    render(<DashboardPage />);
+    renderWithRouter(<DashboardPage />);
 
     expect(screen.getByText(/Emergency Management Console/i)).toBeInTheDocument();
     const triggerBtn = screen.getByRole('button', { name: /Trigger Evacuation/i });

@@ -32,7 +32,13 @@ export function PredictionTimeline({ predictions }: PredictionTimelineProps) {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={predictions} margin={{ top: 8, right: 18, bottom: 8, left: 0 }}>
               <CartesianGrid stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
-              <XAxis dataKey="label" stroke="#64748b" tickLine={false} axisLine={false} className="text-[10px] font-mono" />
+              <XAxis
+                dataKey="label"
+                stroke="#64748b"
+                tickLine={false}
+                axisLine={false}
+                className="text-[10px] font-mono"
+              />
               <YAxis
                 stroke="#64748b"
                 tickLine={false}

@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { api } from '../services/api';
 import type { BackendVenue } from '../services/api';
 import { getActiveEventId, setActiveEventId } from '../features/simulation/simulationStore';
+import { UserMenu, RoleGuard } from '@/features/auth';
 
 export function Navigation() {
   const [venues, setVenues] = useState<BackendVenue[]>([]);
@@ -53,9 +54,15 @@ export function Navigation() {
         className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8"
       >
         <div className="flex items-center gap-6">
-          <NavLink to="/" className="text-sm font-black tracking-widest text-ink mr-4 flex items-center gap-2 uppercase">
+          <NavLink
+            to="/"
+            className="text-sm font-black tracking-widest text-ink mr-4 flex items-center gap-2 uppercase"
+          >
             <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse" />
-            FluxGuard <span className="text-brand-primary font-mono text-[9px] bg-brand-primary/10 px-1.5 py-0.5 rounded tracking-normal">OPS</span>
+            FluxGuard{' '}
+            <span className="text-brand-primary font-mono text-[9px] bg-brand-primary/10 px-1.5 py-0.5 rounded tracking-normal">
+              OPS
+            </span>
           </NavLink>
           <div className="flex items-center gap-1">
             <NavLink
@@ -142,22 +149,90 @@ export function Navigation() {
             >
               Volunteer
             </NavLink>
+            <NavLink
+              to="/predictive-twin"
+              className={({ isActive }) =>
+                `text-[11px] font-bold uppercase tracking-wider transition-all duration-200 hover:text-ink px-3 py-1.5 rounded-md ${
+                  isActive
+                    ? 'text-brand-primary bg-white/5 border border-white/5 shadow-[0_0_12px_rgba(56,189,248,0.05)]'
+                    : 'text-ink-subdued'
+                }`
+              }
+            >
+              Predictive Twin
+            </NavLink>
+            <RoleGuard allowedRoles={['SUPER_ADMIN', 'GLOBAL_OPERATIONS_DIRECTOR']}>
+              <NavLink
+                to="/global-command"
+                className={({ isActive }) =>
+                  `text-[11px] font-bold uppercase tracking-wider transition-all duration-200 hover:text-ink px-3 py-1.5 rounded-md ${
+                    isActive
+                      ? 'text-brand-primary bg-white/5 border border-white/5 shadow-[0_0_12px_rgba(56,189,248,0.05)]'
+                      : 'text-ink-subdued'
+                  }`
+                }
+              >
+                Global Command
+              </NavLink>
+            </RoleGuard>
+            <RoleGuard
+              allowedRoles={[
+                'SUPER_ADMIN',
+                'GLOBAL_OPERATIONS_DIRECTOR',
+                'STADIUM_MANAGER',
+                'SECURITY_SUPERVISOR',
+                'operator',
+                'organizer',
+              ]}
+            >
+              <NavLink
+                to="/autonomous-control"
+                className={({ isActive }) =>
+                  `text-[11px] font-bold uppercase tracking-wider transition-all duration-200 hover:text-ink px-3 py-1.5 rounded-md ${
+                    isActive
+                      ? 'text-brand-primary bg-white/5 border border-white/5 shadow-[0_0_12px_rgba(56,189,248,0.05)]'
+                      : 'text-ink-subdued'
+                  }`
+                }
+              >
+                Autonomous
+              </NavLink>
+            </RoleGuard>
+            <RoleGuard allowedRoles={['SUPER_ADMIN', 'GLOBAL_OPERATIONS_DIRECTOR']}>
+              <NavLink
+                to="/users"
+                className={({ isActive }) =>
+                  `text-[11px] font-bold uppercase tracking-wider transition-all duration-200 hover:text-ink px-3 py-1.5 rounded-md ${
+                    isActive
+                      ? 'text-brand-primary bg-white/5 border border-white/5 shadow-[0_0_12px_rgba(56,189,248,0.05)]'
+                      : 'text-ink-subdued'
+                  }`
+                }
+              >
+                User Admin
+              </NavLink>
+            </RoleGuard>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 border-l border-white/5 pl-4">
-          <span className="text-[10px] text-ink-subdued uppercase tracking-wider font-mono font-bold hidden md:inline">Venue Context:</span>
-          <select
-            value={selectedVenueId}
-            onChange={(e) => handleVenueChange(e.target.value)}
-            className="bg-surface-elevated border border-white/5 text-ink text-xs rounded-md px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-brand-primary"
-          >
-            {venues.map((v) => (
-              <option key={v.id} value={v.id} className="bg-surface text-ink">
-                {v.name}
-              </option>
-            ))}
-          </select>
+        <div className="flex items-center gap-4 border-l border-white/5 pl-4">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-ink-subdued uppercase tracking-wider font-mono font-bold hidden md:inline">
+              Venue Context:
+            </span>
+            <select
+              value={selectedVenueId}
+              onChange={(e) => handleVenueChange(e.target.value)}
+              className="bg-surface-elevated border border-white/5 text-ink text-xs rounded-md px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+            >
+              {venues.map((v) => (
+                <option key={v.id} value={v.id} className="bg-surface text-ink">
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <UserMenu />
         </div>
       </nav>
     </header>

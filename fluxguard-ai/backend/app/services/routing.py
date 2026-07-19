@@ -1,4 +1,5 @@
 from uuid import UUID
+
 from app.core import database
 
 
@@ -21,7 +22,7 @@ def generate_routing_recommendations(event_id: UUID) -> list[dict]:
     available_gates = [g for g in gates if g["id"] != congested_gate["id"]]
     if not available_gates:
         return []
-    
+
     target_gate = min(available_gates, key=lambda g: g.get("queue_length", 0) or 0)
 
     # Generate recommendation if queue backlog exceeds a warning threshold
@@ -36,5 +37,5 @@ def generate_routing_recommendations(event_id: UUID) -> list[dict]:
                 "relief_time_minutes": max(5, round(congested_queue / 24)),
             }
         ]
-    
+
     return []

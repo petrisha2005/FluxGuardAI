@@ -10,6 +10,7 @@ describe('CopilotPanel', () => {
   beforeEach(() => {
     setupFetchMocks();
     resetSimulation();
+    window.localStorage.removeItem('fluxguard_copilot_history');
   });
 
   it('renders initial welcome message and suggestion chips', () => {
@@ -22,9 +23,16 @@ describe('CopilotPanel', () => {
   });
 
   it('submits typed message and displays AI response', async () => {
-    const copilotSpy = vi.spyOn(api, 'submitCopilotMessage').mockResolvedValue({
-      response: 'Local simulation shows Gate C queue length is stable.',
-      suggested_actions: ['Acknowledge alert'],
+    const copilotSpy = vi.spyOn(api, 'submitCommandCenterCopilotMessage').mockResolvedValue({
+      answer: 'Local simulation shows Gate C queue length is stable.',
+      confidence: 0.87,
+      recommendations: ['Acknowledge alert'],
+      risk_level: 'HIGH',
+      affected_zones: ['Gate C'],
+      recovery_time: '10 minutes',
+      priority: 'ACTIVE_MITIGATION',
+      reasoning: 'Derived from live simulated density and queue length.',
+      impact: 'Reduces congestion pressure.',
     });
 
     render(<CopilotPanel />);
@@ -36,13 +44,17 @@ describe('CopilotPanel', () => {
     fireEvent.click(sendButton);
 
     expect(copilotSpy).toHaveBeenCalledWith(
-      'e0000000-0000-0000-0000-000000000000',
-      'Why is Gate C high risk?',
+      expect.objectContaining({
+        message: 'Why is Gate C high risk?',
+        venue: 'FluxGuard AI Stadium Command Center',
+      }),
+      expect.objectContaining({ timeoutMs: 12000, retries: 1 }),
     );
     expect(
       await screen.findByText(/Local simulation shows Gate C queue length is stable./i),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /execute: Acknowledge alert/i })).toBeInTheDocument();
+    expect(screen.getByText(/Confidence 87%/i)).toBeInTheDocument();
   });
 
   it('renders intelligence deck tabs and explains directives', () => {
@@ -54,9 +66,10 @@ describe('CopilotPanel', () => {
     expect(screen.getByRole('button', { name: /BRIEFING/i })).toBeInTheDocument();
 
     // Renders the directive recommendation details
-    expect(screen.getByText(/AI Directive Recommendation/i)).toBeInTheDocument();
-    expect(screen.getByText(/Explain Recommendation/i)).toBeInTheDocument();
-    expect(screen.getByText(/92% CONFIDENCE/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cognitive Safety Agent/i)).toBeInTheDocument();
+    expect(screen.getByText(/Reason \/ Rationale/i)).toBeInTheDocument();
+    expect(screen.getByText(/92%/i)).toBeInTheDocument();
+    expect(screen.getByText(/Confidence/i)).toBeInTheDocument();
 
     // Renders the alternative recommendations comparison
     expect(screen.getByText(/Alternative Actions comparison/i)).toBeInTheDocument();
@@ -94,7 +107,7 @@ describe('CopilotPanel', () => {
     expect(screen.getByText(/EXECUTIVE BRIEFING/i)).toBeInTheDocument();
     expect(screen.getByText(/Elevated Risk Zones/i)).toBeInTheDocument();
 
-    const regenBtn = screen.getByRole('button', { name: /Regenerate/i });
+    const regenBtn = screen.getByRole('button', { name: /Regenerate executive briefing/i });
     fireEvent.click(regenBtn);
 
     expect(screen.getByText(/EXECUTIVE BRIEFING/i)).toBeInTheDocument();

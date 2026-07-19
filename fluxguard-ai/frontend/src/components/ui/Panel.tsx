@@ -13,7 +13,7 @@ export function Panel({ children, className, eyebrow, title, ...props }: PanelPr
     <section
       className={cn(
         'rounded-md border border-white/5 bg-surface-elevated p-5 transition-all duration-200 hover:border-white/10',
-        className
+        className,
       )}
       {...props}
     >
@@ -24,7 +24,11 @@ export function Panel({ children, className, eyebrow, title, ...props }: PanelPr
               {eyebrow}
             </p>
           ) : null}
-          {title ? <h2 className="text-xs font-bold uppercase tracking-wider text-ink font-mono mt-0.5">{title}</h2> : null}
+          {title ? (
+            <h2 className="text-xs font-bold uppercase tracking-wider text-ink font-mono mt-0.5">
+              {title}
+            </h2>
+          ) : null}
         </header>
       ) : null}
       {children}

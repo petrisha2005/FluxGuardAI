@@ -4,7 +4,7 @@
 
 FluxGuard AI is a predictive crowd orchestration platform for mega-events. It forecasts stadium congestion before it becomes operationally unsafe and prepares role-specific guidance for fans, volunteers, stadium operators, and event organizers.
 
-This repository contains the production foundation only. It intentionally does not yet implement crowd simulation, ML models, Claude API integration, dashboard features, or database models.
+This repository contains the FluxGuard AI demo and production foundation. The current implementation includes the React command-center experience, local simulation/intelligence layers, FastAPI backend endpoints, and test coverage used for hackathon evaluation.
 
 ## Architecture Overview
 
@@ -14,7 +14,8 @@ The implementation follows the architecture defined in [docs/SYSTEM_ARCHITECTURE
 - Backend: Python 3.12 and FastAPI.
 - AI boundary: prompt orchestration will live behind backend services, never directly in route handlers.
 - ML boundary: forecast services will emit predictions only; deterministic risk scoring and alerting remain separate.
-- Realtime boundary: WebSockets will be added later for live zone and alert updates.
+- Realtime boundary: WebSockets carry event-scoped operational updates; local simulation remains deterministic for demo/test repeatability.
+- Performance boundary: route-level code splitting keeps command-center, analytics, AI, and admin screens outside the initial public-page bundle.
 
 ## Repository Structure
 
@@ -83,9 +84,10 @@ npm run build
 Backend:
 
 ```bash
-ruff check .
-black --check .
-pytest
+cd backend
+.venv/bin/python -m ruff check app
+.venv/bin/python -m black --check app
+.venv/bin/python -m pytest
 ```
 
 Run all pre-commit hooks:
@@ -103,4 +105,3 @@ pre-commit run --all-files
 - AI provider calls must go through service adapters in future implementation.
 
 See [SECURITY.md](SECURITY.md) and [docs/SECURITY.md](docs/SECURITY.md).
-

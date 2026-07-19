@@ -150,7 +150,19 @@ export function setupFetchMocks() {
   const fetchMock = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
     let responseData: any = { data: {} };
 
-    if (
+    if (url.includes('/api/copilot/chat')) {
+      responseData = {
+        answer: 'Live simulation indicates Gate C is the current focus zone at 86% density.',
+        confidence: 0.84,
+        recommendations: ['Validate Gate C queue conditions', 'Redirect arrivals to West Entrance'],
+        risk_level: 'HIGH',
+        affected_zones: ['Gate C'],
+        recovery_time: '10-18 minutes',
+        priority: 'ACTIVE_MITIGATION',
+        reasoning: 'Derived from live simulated density and queue length.',
+        impact: 'Reduces localized queue pressure.',
+      };
+    } else if (
       url.includes('/api/v1/events') &&
       !url.includes('/zones') &&
       !url.includes('/predictions') &&
@@ -209,6 +221,425 @@ export function setupFetchMocks() {
             average_scans_per_turnstile: 7.5,
             status: 'normal',
           },
+        },
+      };
+    } else if (url.includes('/api/stadiums') || url.includes('/api/v1/stadiums')) {
+      responseData = {
+        status: 'success',
+        data: [
+          {
+            id: 'stadium_001',
+            name: 'MetLife Stadium',
+            city: 'New York',
+            country: 'USA',
+            capacity: 82000,
+            currentAttendance: 72000,
+            riskLevel: 'high',
+            predictionStatus: 'Critical congestion in 18 minutes',
+          },
+          {
+            id: 'stadium_002',
+            name: 'SoFi Stadium',
+            city: 'Los Angeles',
+            country: 'USA',
+            capacity: 70000,
+            currentAttendance: 65000,
+            riskLevel: 'low',
+            predictionStatus: 'Standard crowd flow',
+          },
+          {
+            id: 'stadium_003',
+            name: 'Mercedes-Benz Stadium',
+            city: 'Atlanta',
+            country: 'USA',
+            capacity: 71000,
+            currentAttendance: 68000,
+            riskLevel: 'low',
+            predictionStatus: 'Stable exit patterns',
+          },
+          {
+            id: 'stadium_004',
+            name: 'Hard Rock Stadium',
+            city: 'Miami',
+            country: 'USA',
+            capacity: 65000,
+            currentAttendance: 59000,
+            riskLevel: 'medium',
+            predictionStatus: 'Moderate queue delays',
+          },
+        ],
+      };
+    } else if (url.includes('/predictions/timeline')) {
+      responseData = {
+        status: 'success',
+        data: [
+          {
+            zone_name: 'North Gate',
+            current_risk: 'LOW',
+            predicted_risk: 'MEDIUM',
+            horizon_minutes: 20,
+            predicted_density: 55,
+            predicted_queue_length: 120,
+            predicted_flow_rate: 45,
+            incident_probability: 22,
+            staff_requirement: 8,
+            confidence: 87,
+            reason: 'Transient arrival surges',
+            timeframe: '+20 minutes',
+          },
+          {
+            zone_name: 'Gate C',
+            current_risk: 'HIGH',
+            predicted_risk: 'CRITICAL',
+            horizon_minutes: 60,
+            predicted_density: 90,
+            predicted_queue_length: 350,
+            predicted_flow_rate: 70,
+            incident_probability: 80,
+            staff_requirement: 22,
+            confidence: 71,
+            reason: 'Bottleneck congestion',
+            timeframe: '+60 minutes',
+          },
+        ],
+      };
+    } else if (url.includes('/scenarios/simulate')) {
+      responseData = {
+        status: 'success',
+        data: {
+          predictedImpact: 'Risk escalates to CRITICAL; queue increases +35%',
+          recoveryTime: '18 minutes',
+          recommendations: ['Open temporary checkpoint at North Gate'],
+        },
+      };
+    } else if (url.includes('/history/similar-events')) {
+      responseData = {
+        status: 'success',
+        data: [
+          {
+            event_type: 'Football Cup Qualifier',
+            date: '2024-11-14',
+            crowd_size: 48500,
+            weather: 'Rainy',
+            incidents: 2,
+            actions_taken: 'Opened auxiliary Gate B secondary turnstiles',
+            outcome: 'Reduced queue delays at Gate B by 28% on average',
+          },
+        ],
+      };
+    } else if (url.includes('/autonomous/mode')) {
+      responseData = {
+        status: 'success',
+        data: { enabled: false },
+      };
+    } else if (url.includes('/autonomous/decisions')) {
+      responseData = {
+        status: 'success',
+        data: [
+          {
+            id: 'dec_mock_1',
+            agent: 'Crowd Control Agent',
+            action: 'OPEN_GATE',
+            target: 'Gate B',
+            confidence: 94,
+            reason: 'Gate C density exceeds safety threshold',
+            expectedImpact: 'Queue duration reduced by 28%',
+          },
+        ],
+      };
+    } else if (url.includes('/autonomous/history')) {
+      responseData = {
+        status: 'success',
+        data: [
+          {
+            id: 'exec_mock_1',
+            decisionId: 'dec_mock_1',
+            actionType: 'OPEN_GATE',
+            target: 'Gate B',
+            timestamp: '2026-07-17T18:00:00Z',
+            operator: 'OPS-Lead',
+            result: 'Success: Gates bypassed',
+            impact: 'Density decreased by 14%',
+          },
+        ],
+      };
+    } else if (url.includes('/autonomous/learning')) {
+      responseData = {
+        status: 'success',
+        data: [
+          {
+            action: 'OPEN_GATE (Gate B)',
+            outcome: 'Queue length reduced by 31%',
+            effectivenessScore: 94,
+            historicalSuccessRate: '92%',
+          },
+        ],
+      };
+    } else if (url.includes('/digital-twin/overview')) {
+      responseData = {
+        status: 'success',
+        data: {
+          stadiumCapacity: 85000,
+          currentAttendance: 75200,
+          densityPercent: 88,
+          riskLevel: 'HIGH',
+          activeIncidents: 1,
+          gateStatus: 'Restricted',
+          emergencyLevel: 'YELLOW',
+          weather: {
+            temp: 17.5,
+            rain: '2.4mm',
+            wind: '14km/h',
+            visibility: '8km',
+            description: 'Showers',
+          },
+        },
+      };
+    } else if (url.includes('/digital-twin/zones')) {
+      responseData = {
+        status: 'success',
+        data: [
+          {
+            id: '00000000-0000-0000-0000-000000000001',
+            name: 'North Stand',
+            density: 65,
+            capacity: 15000,
+            risk: 65,
+            status: 'MEDIUM',
+            occupancy: 9750,
+            queueLength: 8,
+            riskScore: 65,
+            openIncidents: 0,
+            aiRecommendation: 'Stable crowd flow. No action required.',
+          },
+          {
+            id: '00000000-0000-0000-0000-000000000002',
+            name: 'East Stand',
+            density: 45,
+            capacity: 18000,
+            risk: 45,
+            status: 'LOW',
+            occupancy: 8100,
+            queueLength: 0,
+            riskScore: 45,
+            openIncidents: 0,
+            aiRecommendation: 'Stable crowd flow. No action required.',
+          },
+          {
+            id: '00000000-0000-0000-0000-000000000003',
+            name: 'Gate C',
+            density: 86,
+            capacity: 10000,
+            risk: 86,
+            status: 'CRITICAL',
+            occupancy: 8600,
+            queueLength: 28,
+            riskScore: 86,
+            openIncidents: 1,
+            aiRecommendation: 'Open Gate C overflow corridors immediately to drain congestion.',
+          },
+          {
+            id: '00000000-0000-0000-0000-000000000004',
+            name: 'West Stand',
+            density: 55,
+            capacity: 12000,
+            risk: 55,
+            status: 'LOW',
+            occupancy: 6600,
+            queueLength: 2,
+            riskScore: 55,
+            openIncidents: 0,
+            aiRecommendation: 'Stable crowd flow. No action required.',
+          },
+          {
+            id: '00000000-0000-0000-0000-000000000005',
+            name: 'Concourse',
+            density: 72,
+            capacity: 20000,
+            risk: 72,
+            status: 'HIGH',
+            occupancy: 14400,
+            queueLength: 12,
+            riskScore: 72,
+            openIncidents: 0,
+            aiRecommendation: 'Deploy 3 additional stewards to Concourse sectors.',
+          },
+          {
+            id: '00000000-0000-0000-0000-000000000006',
+            name: 'Parking Lot',
+            density: 30,
+            capacity: 10000,
+            risk: 30,
+            status: 'LOW',
+            occupancy: 3000,
+            queueLength: 0,
+            riskScore: 30,
+            openIncidents: 0,
+            aiRecommendation: 'Stable conditions.',
+          },
+        ],
+      };
+    } else if (url.includes('/digital-twin/incidents')) {
+      responseData = {
+        status: 'success',
+        data: [
+          {
+            id: 'dt-inc-1',
+            type: 'CROWD_FLOW',
+            zoneId: '00000000-0000-0000-0000-000000000003',
+            zoneName: 'Gate C',
+            severity: 'CRITICAL',
+            description: 'Surge congestion at entry corridors.',
+            status: 'PENDING',
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      };
+    } else if (url.includes('/digital-twin/heatmap')) {
+      responseData = {
+        status: 'success',
+        data: [
+          {
+            zoneId: '00000000-0000-0000-0000-000000000001',
+            zoneName: 'North Stand',
+            density: 65,
+            riskLevel: 'MEDIUM',
+          },
+          {
+            zoneId: '00000000-0000-0000-0000-000000000002',
+            zoneName: 'East Stand',
+            density: 45,
+            riskLevel: 'LOW',
+          },
+          {
+            zoneId: '00000000-0000-0000-0000-000000000003',
+            zoneName: 'Gate C',
+            density: 86,
+            riskLevel: 'CRITICAL',
+          },
+          {
+            zoneId: '00000000-0000-0000-0000-000000000004',
+            zoneName: 'West Stand',
+            density: 55,
+            riskLevel: 'LOW',
+          },
+          {
+            zoneId: '00000000-0000-0000-0000-000000000005',
+            zoneName: 'Concourse',
+            density: 72,
+            riskLevel: 'HIGH',
+          },
+        ],
+      };
+    } else if (url.includes('/digital-twin/cameras')) {
+      responseData = {
+        status: 'success',
+        data: [
+          {
+            id: 'dt-cam-1',
+            name: 'North Stand Upper - Cam 101',
+            status: 'active',
+            fps: 30,
+            accuracy: 0.94,
+            zoneId: '00000000-0000-0000-0000-000000000001',
+          },
+          {
+            id: 'dt-cam-2',
+            name: 'East Stand Gate E - Cam 102',
+            status: 'active',
+            fps: 24,
+            accuracy: 0.96,
+            zoneId: '00000000-0000-0000-0000-000000000002',
+          },
+          {
+            id: 'dt-cam-3',
+            name: 'Gate C Turnstiles - Cam 103',
+            status: 'active',
+            fps: 30,
+            accuracy: 0.95,
+            zoneId: '00000000-0000-0000-0000-000000000003',
+          },
+          {
+            id: 'dt-cam-4',
+            name: 'West Stand Egress - Cam 104',
+            status: 'active',
+            fps: 24,
+            accuracy: 0.92,
+            zoneId: '00000000-0000-0000-0000-000000000004',
+          },
+        ],
+      };
+    } else if (url.includes('/digital-twin/crowd-flow')) {
+      responseData = {
+        status: 'success',
+        data: [
+          {
+            sourceZoneId: '00000000-0000-0000-0000-000000000003',
+            sourceZoneName: 'Gate C',
+            targetZoneId: '00000000-0000-0000-0000-000000000005',
+            targetZoneName: 'Concourse',
+            flowRate: 120,
+            velocity: 0.8,
+            status: 'SLOWED',
+          },
+          {
+            sourceZoneId: '00000000-0000-0000-0000-000000000001',
+            sourceZoneName: 'North Stand',
+            targetZoneId: '00000000-0000-0000-0000-000000000005',
+            targetZoneName: 'Concourse',
+            flowRate: 75,
+            velocity: 1.6,
+            status: 'NORMAL',
+          },
+          {
+            sourceZoneId: '00000000-0000-0000-0000-000000000004',
+            sourceZoneName: 'West Stand',
+            targetZoneId: '00000000-0000-0000-0000-000000000005',
+            targetZoneName: 'Concourse',
+            flowRate: 60,
+            velocity: 1.8,
+            status: 'NORMAL',
+          },
+        ],
+      };
+    } else if (url.includes('/digital-twin/live')) {
+      responseData = {
+        status: 'success',
+        data: [
+          {
+            timestamp: '14:24:02',
+            message: 'Surge congestion at Gate C turnstiles - 86% density.',
+            severity: 'CRITICAL',
+          },
+          {
+            timestamp: '14:23:15',
+            message: 'Medical coordinate dispatch to North Stand row 12.',
+            severity: 'MEDIUM',
+          },
+          {
+            timestamp: '14:21:40',
+            message: 'AI recommends redirecting inflow to West Stand gates.',
+            severity: 'HIGH',
+          },
+          {
+            timestamp: '14:18:00',
+            message: 'Transit line delays: train arrivals frequency drop (12 mins).',
+            severity: 'LOW',
+          },
+        ],
+      };
+    } else if (url.includes('/vision/assess')) {
+      responseData = {
+        status: 'success',
+        data: {
+          cameraId: 'CAM-101',
+          zone: 'Gate A Ingress',
+          estimatedPeople: 1200,
+          density: 'MEDIUM',
+          riskLevel: 'MEDIUM',
+          riskScore: 54,
+          abnormalMovementDetected: false,
+          operationalRecommendation: 'Deploy roaming stewards',
         },
       };
     }

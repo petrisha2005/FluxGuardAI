@@ -1,6 +1,7 @@
 type FrontendConfig = {
   apiBaseUrl: string;
   appName: string;
+  enableDemoAuth: boolean;
 };
 
 export const config: FrontendConfig = {
@@ -10,4 +11,7 @@ export const config: FrontendConfig = {
       ? `${window.location.protocol}//${window.location.hostname}:8000`
       : 'http://localhost:8000'),
   appName: import.meta.env.VITE_APP_NAME ?? 'FluxGuard AI',
+  enableDemoAuth:
+    import.meta.env.VITE_ENABLE_DEMO_AUTH !== 'false' &&
+    (import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_AUTH === 'true'),
 };

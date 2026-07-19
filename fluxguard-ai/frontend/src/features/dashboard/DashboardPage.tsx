@@ -9,7 +9,7 @@ import type {
 } from '@/features/simulation/simulationTypes';
 import { CrowdZonePanel } from './components/CrowdZonePanel';
 import { DashboardHeader } from './components/DashboardHeader';
-import { RiskOverview } from './components/RiskOverview';
+import { MissionControl } from './components/MissionControl';
 import { FlowVisualizer } from './components/FlowVisualizer';
 import { CctvFeedGrid } from './components/CctvFeedGrid';
 import { CrowdRoutingPanel } from './components/CrowdRoutingPanel';
@@ -184,7 +184,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <DashboardHeader />
-      <RiskOverview summary={dashboardState.summary} />
+      <MissionControl />
       <CrowdRoutingPanel />
       <EvacuationControlPanel />
 

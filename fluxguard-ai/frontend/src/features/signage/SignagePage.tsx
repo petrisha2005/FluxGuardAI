@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/services/api';
 import type { BackendEvent } from '@/services/api';
 import { getActiveEventId, useSimulationState } from '@/features/simulation/simulationStore';
+import { RoleGuard } from '@/features/auth';
 
 interface SignageGuidance {
   guidanceId: string;
@@ -267,45 +268,59 @@ export function SignagePage() {
       </div>
 
       {/* Interactive Display Broadcast Test Panel */}
-      <div className="rounded-2xl border border-white/5 bg-surface-elevated/20 p-5 backdrop-blur flex flex-wrap items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h3 className="text-sm font-bold text-ink">🛠️ {t('Test Panel')}</h3>
-          <p className="text-xs text-ink-muted">
-            Simulate and override safety messages on a chosen LED monitor.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-ink-muted font-mono">{t('Select Target Screen')}:</span>
-            <select
-              aria-label="Target Screen Selector"
-              value={testTargetZone}
-              onChange={(e) => setTestTargetZone(e.target.value)}
-              className="rounded bg-slate-900 border border-white/10 text-xs text-ink px-2.5 py-1.5 focus:ring-0 focus:ring-offset-0 cursor-pointer"
-            >
-              {zonesList.map((z) => (
-                <option key={z.id} value={z.id}>
-                  {z.label.replace('Screen Display', '')}
-                </option>
-              ))}
-            </select>
+      <RoleGuard
+        allowedRoles={['STADIUM_MANAGER', 'SECURITY_SUPERVISOR', 'SUPER_ADMIN']}
+        fallback={
+          <div className="rounded-2xl border border-white/5 bg-surface-elevated/20 p-5 backdrop-blur flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-ink">🛠️ {t('Test Panel')}</h3>
+              <p className="text-xs text-ink-muted">
+                ⚠ Security clearance required to override stadium LED displays.
+              </p>
+            </div>
           </div>
-          <button
-            onClick={triggerMockAlert}
-            className="rounded bg-brand-primary/10 border border-brand-primary/20 text-brand-primary px-3 py-1.5 text-xs font-bold hover:bg-brand-primary/20 transition-all"
-          >
-            {t('Trigger Mock Alert')}
-          </button>
-          {testDirective && (
+        }
+      >
+        <div className="rounded-2xl border border-white/5 bg-surface-elevated/20 p-5 backdrop-blur flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-ink">🛠️ {t('Test Panel')}</h3>
+            <p className="text-xs text-ink-muted">
+              Simulate and override safety messages on a chosen LED monitor.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-ink-muted font-mono">{t('Select Target Screen')}:</span>
+              <select
+                aria-label="Target Screen Selector"
+                value={testTargetZone}
+                onChange={(e) => setTestTargetZone(e.target.value)}
+                className="rounded bg-slate-900 border border-white/10 text-xs text-ink px-2.5 py-1.5 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+              >
+                {zonesList.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.label.replace('Screen Display', '')}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
-              onClick={clearTest}
-              className="rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 px-3 py-1.5 text-xs font-bold hover:bg-rose-500/20 transition-all"
+              onClick={triggerMockAlert}
+              className="rounded bg-brand-primary/10 border border-brand-primary/20 text-brand-primary px-3 py-1.5 text-xs font-bold hover:bg-brand-primary/20 transition-all"
             >
-              {t('Clear Test')}
+              {t('Trigger Mock Alert')}
             </button>
-          )}
+            {testDirective && (
+              <button
+                onClick={clearTest}
+                className="rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 px-3 py-1.5 text-xs font-bold hover:bg-rose-500/20 transition-all"
+              >
+                {t('Clear Test')}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      </RoleGuard>
 
       {/* Screen Displays Grid */}
       <div className="grid gap-6 sm:grid-cols-2">

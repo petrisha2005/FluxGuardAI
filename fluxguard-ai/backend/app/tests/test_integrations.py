@@ -1,17 +1,19 @@
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
+import pytest
 
-from app.core.security import User, get_current_user
+from app.auth.dependencies import get_current_user
+from app.core.security import User
 from app.main import app
 from app.services.adapters.ticket_scans import get_ticket_scan_rates
 from app.services.adapters.transit import get_transit_status
 from app.services.adapters.weather import get_current_weather
 
 SEED_EVENT_ID = "e0000000-0000-0000-0000-000000000000"
+pytestmark = pytest.mark.asyncio
 
 
-def test_adapters_simulation_logic() -> None:
+async def test_adapters_simulation_logic() -> None:
     # 1. Weather
     weather = get_current_weather()
     assert "status" in weather
@@ -28,16 +30,14 @@ def test_adapters_simulation_logic() -> None:
     assert scans["active_turnstiles"] == 16
 
 
-def test_integrations_endpoint_role_auth() -> None:
+async def test_integrations_endpoint_role_auth(async_client) -> None:
     # Remove conftest overrides to test explicit RBAC checks
     app.dependency_overrides.clear()
-    client = TestClient(app)
-
     # 1. Access permitted for Operator role
     app.dependency_overrides[get_current_user] = lambda: User(
         id="op-1", email="op@stadium.org", role="operator"
     )
-    res_op = client.get(f"/api/v1/events/{SEED_EVENT_ID}/integrations")
+    res_op = await async_client.get(f"/api/v1/events/{SEED_EVENT_ID}/integrations")
     assert res_op.status_code == 200
     assert "weather" in res_op.json()["data"]
     assert "transit" in res_op.json()["data"]
@@ -46,24 +46,22 @@ def test_integrations_endpoint_role_auth() -> None:
     app.dependency_overrides[get_current_user] = lambda: User(
         id="fan-1", email="fan@gmail.com", role="fan"
     )
-    res_fan = client.get(f"/api/v1/events/{SEED_EVENT_ID}/integrations")
+    res_fan = await async_client.get(f"/api/v1/events/{SEED_EVENT_ID}/integrations")
     assert res_fan.status_code == 403
 
     # Clean up overrides to return to conftest default
     app.dependency_overrides.clear()
 
 
-def test_integrations_not_found() -> None:
-    client = TestClient(app)
+async def test_integrations_not_found(async_client) -> None:
     fake_id = uuid4()
-    res = client.get(f"/api/v1/events/{fake_id}/integrations")
+    res = await async_client.get(f"/api/v1/events/{fake_id}/integrations")
     assert res.status_code == 404
 
 
-def test_predictions_incorporate_coefficients() -> None:
-    client = TestClient(app)
+async def test_predictions_incorporate_coefficients(async_client) -> None:
     # Ensure prediction cycle runs cleanly pulling from live adapters
-    response = client.post(f"/api/v1/events/{SEED_EVENT_ID}/predictions/run")
+    response = await async_client.post(f"/api/v1/events/{SEED_EVENT_ID}/predictions/run")
     assert response.status_code == 202
     data = response.json()["data"]
     assert len(data) > 0
@@ -73,8 +71,9 @@ def test_predictions_incorporate_coefficients() -> None:
         assert 0 <= p["predictedDensity"] <= 100
 
 
-def test_weather_adapter_fallback_on_exception() -> None:
+async def test_weather_adapter_fallback_on_exception() -> None:
     from unittest.mock import patch
+
     with patch("app.services.adapters.weather.datetime") as mock_datetime:
         mock_datetime.now.side_effect = RuntimeError("Weather API Timeout")
         fallback_weather = get_current_weather()
@@ -83,8 +82,9 @@ def test_weather_adapter_fallback_on_exception() -> None:
         assert "fallback" in fallback_weather["description"].lower()
 
 
-def test_transit_adapter_fallback_on_exception() -> None:
+async def test_transit_adapter_fallback_on_exception() -> None:
     from unittest.mock import patch
+
     with patch("app.services.adapters.transit.datetime") as mock_datetime:
         mock_datetime.now.side_effect = Exception("Connection Refused")
         fallback_transit = get_transit_status()
@@ -93,8 +93,9 @@ def test_transit_adapter_fallback_on_exception() -> None:
         assert "fallback" in fallback_transit["description"].lower()
 
 
-def test_ticketing_adapter_fallback_on_exception() -> None:
+async def test_ticketing_adapter_fallback_on_exception() -> None:
     from unittest.mock import patch
+
     with patch("app.services.adapters.ticket_scans.random") as mock_random:
         mock_random.randint.side_effect = RuntimeError("Sensors Unreachable")
         fallback_ticketing = get_ticket_scan_rates()
