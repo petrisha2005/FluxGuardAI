@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.core import database
 from app.core.security import require_roles
 from app.schemas.base import StandardResponse
+from app.schemas.camera import CameraResponse
 from app.schemas.event import EventResponse
+from app.schemas.routing import RoutingRecommendationResponse
 from app.schemas.zone import ZoneResponse
 from app.schemas.zone_link import ZoneLinkResponse
-from app.schemas.camera import CameraResponse
-from app.schemas.routing import RoutingRecommendationResponse
 from app.services.routing import generate_routing_recommendations
 
 router = APIRouter(
@@ -76,7 +76,7 @@ def get_event_zone_links(eventId: UUID):
             },
         )
     links = database.get_zone_links(eventId)
-    return StandardResponse(data=[ZoneLinkResponse(**l) for l in links])
+    return StandardResponse(data=[ZoneLinkResponse(**link) for link in links])
 
 
 @router.get("/{eventId}/cameras", response_model=StandardResponse)

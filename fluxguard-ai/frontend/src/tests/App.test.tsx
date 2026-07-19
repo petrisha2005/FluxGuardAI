@@ -10,7 +10,7 @@ describe('App', () => {
     setupFetchMocks();
   });
 
-  it('renders the application shell', () => {
+  it('renders the application shell', async () => {
     render(
       <MemoryRouter
         initialEntries={['/dashboard']}
@@ -20,11 +20,15 @@ describe('App', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('navigation', { name: /primary navigation/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /operations command center/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('navigation', { name: /primary navigation/i }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /operations command center/i }),
+    ).toBeInTheDocument();
   });
 
-  it('provides an accessible skip link and live loading status', () => {
+  it('provides an accessible skip link and live loading status', async () => {
     render(
       <MemoryRouter
         initialEntries={['/dashboard']}
@@ -34,9 +38,12 @@ describe('App', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText(/skip to main content/i)).toHaveAttribute('href', '#main-content');
+    expect(await screen.findByText(/skip to main content/i)).toHaveAttribute(
+      'href',
+      '#main-content',
+    );
     expect(
-      screen.getByRole('status', { name: /dashboard is using live simulated/i }),
+      await screen.findByRole('status', { name: /dashboard is using live simulated/i }),
     ).toBeInTheDocument();
   });
 });

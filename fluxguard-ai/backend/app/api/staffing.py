@@ -59,7 +59,9 @@ async def get_staffing_status(eventId: UUID):
     zones = database.get_zones_for_event(eventId)
     if not zones:
         return StandardResponse(
-            data=StaffingStatusResponse(current_staff={}, recommended_staff={}, suggestions=[], alerts=[])
+            data=StaffingStatusResponse(
+                current_staff={}, recommended_staff={}, suggestions=[], alerts=[]
+            )
         )
 
     risk_scores = database.get_latest_risk_scores(eventId)

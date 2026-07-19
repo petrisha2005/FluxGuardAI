@@ -39,7 +39,7 @@ const FRONTEND_TRANSLATIONS: Record<string, Record<string, string>> = {
     'Maintain active zone monitoring.': 'Mantener el monitoreo activo de la zona.',
     'Reassess zone posture on the next simulation interval.':
       'Volver a evaluar la postura de la zona en el siguiente intervalo de simulación.',
-    'Confidence': 'Confianza',
+    Confidence: 'Confianza',
     'CRITICAL DIRECTIVE': 'DIRECTIVA CRÍTICA',
     'ROUTINE DIRECTIVE': 'DIRECTIVA DE RUTINA',
     'Directive Assessment': 'Evaluación de Directiva',
@@ -74,7 +74,7 @@ const FRONTEND_TRANSLATIONS: Record<string, Record<string, string>> = {
     'Maintain active zone monitoring.': 'Maintenir une surveillance active de la zone.',
     'Reassess zone posture on the next simulation interval.':
       'Réévaluer la posture de la zone au prochain intervalle.',
-    'Confidence': 'Confiance',
+    Confidence: 'Confiance',
     'CRITICAL DIRECTIVE': 'DIRECTIVE CRITIQUE',
     'ROUTINE DIRECTIVE': 'DIRECTIVE DE ROUTINE',
     'Directive Assessment': 'Évaluation de Directive',
@@ -108,7 +108,7 @@ const FRONTEND_TRANSLATIONS: Record<string, Record<string, string>> = {
     'Maintain active zone monitoring.': 'Aktive Zonenüberwachung beibehalten.',
     'Reassess zone posture on the next simulation interval.':
       'Bewerten Sie die Zonenhaltung im nächsten Intervall neu.',
-    'Confidence': 'Vertrauen',
+    Confidence: 'Vertrauen',
     'CRITICAL DIRECTIVE': 'KRITISCHE ANWEISUNG',
     'ROUTINE DIRECTIVE': 'ROUTINEANWEISUNG',
     'Directive Assessment': 'Richtlinienbewertung',

@@ -1,918 +1,590 @@
-import asyncio
+import contextlib
 import json
 import logging
-import os
-import threading
+import uuid
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-import asyncpg
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
+from app.db.database import Base
+from app.db.models import (
+    ActionExecution,
+    AgentDecision,
+    Alert,
+    AuditLog,
+    Camera,
+    CrowdMeasurement,
+    Event,
+    Feedback,
+    GuidanceMessage,
+    HistoricalRecord,
+    Incident,
+    Intervention,
+    Prediction,
+    RiskScore,
+    Stadium,
+    User,
+    Volunteer,
+    Zone,
+    ZoneStaffing,
+)
+from app.repositories.event_repository import EventRepository
+from app.repositories.incident_repository import IncidentRepository
+from app.repositories.stadium_repository import StadiumRepository
+from app.repositories.volunteer_repository import VolunteerRepository
 
 logger = logging.getLogger("fluxguard.database")
 
-# Mock database tables using thread-safe structures for local offline fallback
-_lock = threading.Lock()
 
-# Seed Venues
-_venues = {
-    UUID("b0000000-0000-0000-0000-000000000000"): {
-        "id": UUID("b0000000-0000-0000-0000-000000000000"),
-        "name": "Lucusa Stadium",
-        "city": "Lucusa",
-        "country": "Lusaka",
-        "timezone": "UTC",
-        "metadata": {"latitude": -15.4167, "longitude": 28.2833},
-    },
-    UUID("b0000000-0000-0000-0000-000000000001"): {
-        "id": UUID("b0000000-0000-0000-0000-000000000001"),
-        "name": "City Arena",
-        "city": "Lucusa",
-        "country": "Lusaka",
-        "timezone": "UTC",
-        "metadata": {"latitude": -15.4300, "longitude": 28.3100},
-    },
-    UUID("b0000000-0000-0000-0000-000000000002"): {
-        "id": UUID("b0000000-0000-0000-0000-000000000002"),
-        "name": "Downtown Fan Zone",
-        "city": "Lucusa",
-        "country": "Lusaka",
-        "timezone": "UTC",
-        "metadata": {"latitude": -15.4050, "longitude": 28.2700},
-    },
-}
-
-# Seed Events mapped to Venues
-_events = {
-    UUID("e0000000-0000-0000-0000-000000000000"): {
-        "id": UUID("e0000000-0000-0000-0000-000000000000"),
-        "name": "FIFA World Cup 2026 - Opening Match",
-        "description": "Opening match at the stadium",
-        "status": "active",
-        "starts_at": datetime(2026, 6, 11, 18, 0, 0),
-        "ends_at": datetime(2026, 6, 11, 22, 0, 0),
-        "venue_id": UUID("b0000000-0000-0000-0000-000000000000"),
-    },
-    UUID("e0000000-0000-0000-0000-000000000001"): {
-        "id": UUID("e0000000-0000-0000-0000-000000000001"),
-        "name": "FIFA World Cup 2026 - Group B Match",
-        "description": "Group Stage B match",
-        "status": "active",
-        "starts_at": datetime(2026, 6, 12, 15, 0, 0),
-        "ends_at": datetime(2026, 6, 12, 19, 0, 0),
-        "venue_id": UUID("b0000000-0000-0000-0000-000000000001"),
-    },
-    UUID("e0000000-0000-0000-0000-000000000002"): {
-        "id": UUID("e0000000-0000-0000-0000-000000000002"),
-        "name": "World Cup City Live Watch Party",
-        "description": "Downtown watch party under the stars",
-        "status": "active",
-        "starts_at": datetime(2026, 6, 12, 18, 0, 0),
-        "ends_at": datetime(2026, 6, 12, 23, 0, 0),
-        "venue_id": UUID("b0000000-0000-0000-0000-000000000002"),
-    },
-}
-
-# Seed Zones mapped to the Event IDs
-_zones = {
-    # Lucusa Stadium Zones
-    UUID("00000000-0000-0000-0000-000000000001"): {
-        "id": UUID("00000000-0000-0000-0000-000000000001"),
-        "event_id": UUID("e0000000-0000-0000-0000-000000000000"),
-        "name": "North Gate",
-        "type": "gate",
-        "capacity": 2000,
-        "parent_zone_id": None,
-        "status": "open",
-    },
-    UUID("00000000-0000-0000-0000-000000000002"): {
-        "id": UUID("00000000-0000-0000-0000-000000000002"),
-        "event_id": UUID("e0000000-0000-0000-0000-000000000000"),
-        "name": "East Concourse",
-        "type": "concourse",
-        "capacity": 5000,
-        "parent_zone_id": None,
-        "status": "open",
-    },
-    UUID("00000000-0000-0000-0000-000000000003"): {
-        "id": UUID("00000000-0000-0000-0000-000000000003"),
-        "event_id": UUID("e0000000-0000-0000-0000-000000000000"),
-        "name": "Gate C",
-        "type": "gate",
-        "capacity": 1500,
-        "parent_zone_id": None,
-        "status": "open",
-    },
-    UUID("00000000-0000-0000-0000-000000000004"): {
-        "id": UUID("00000000-0000-0000-0000-000000000004"),
-        "event_id": UUID("e0000000-0000-0000-0000-000000000000"),
-        "name": "West Entrance",
-        "type": "gate",
-        "capacity": 1800,
-        "parent_zone_id": None,
-        "status": "open",
-    },
-    # City Arena Zones
-    UUID("00000000-0000-0000-0000-000000000005"): {
-        "id": UUID("00000000-0000-0000-0000-000000000005"),
-        "event_id": UUID("e0000000-0000-0000-0000-000000000001"),
-        "name": "Main Entry Gate",
-        "type": "gate",
-        "capacity": 3000,
-        "parent_zone_id": None,
-        "status": "open",
-    },
-    UUID("00000000-0000-0000-0000-000000000006"): {
-        "id": UUID("00000000-0000-0000-0000-000000000006"),
-        "event_id": UUID("e0000000-0000-0000-0000-000000000001"),
-        "name": "South Concourse",
-        "type": "concourse",
-        "capacity": 4000,
-        "parent_zone_id": None,
-        "status": "open",
-    },
-    UUID("00000000-0000-0000-0000-000000000007"): {
-        "id": UUID("00000000-0000-0000-0000-000000000007"),
-        "event_id": UUID("e0000000-0000-0000-0000-000000000001"),
-        "name": "North Gate Stand",
-        "type": "gate",
-        "capacity": 2500,
-        "parent_zone_id": None,
-        "status": "open",
-    },
-    # Downtown Fan Zone Zones
-    UUID("00000000-0000-0000-0000-000000000008"): {
-        "id": UUID("00000000-0000-0000-0000-000000000008"),
-        "event_id": UUID("e0000000-0000-0000-0000-000000000002"),
-        "name": "Screening Plaza",
-        "type": "concourse",
-        "capacity": 8000,
-        "parent_zone_id": None,
-        "status": "open",
-    },
-    UUID("00000000-0000-0000-0000-000000000009"): {
-        "id": UUID("00000000-0000-0000-0000-000000000009"),
-        "event_id": UUID("e0000000-0000-0000-0000-000000000002"),
-        "name": "Food & Beverage Court",
-        "type": "concourse",
-        "capacity": 3000,
-        "parent_zone_id": None,
-        "status": "open",
-    },
-    UUID("00000000-0000-0000-0000-000000000010"): {
-        "id": UUID("00000000-0000-0000-0000-000000000010"),
-        "event_id": UUID("e0000000-0000-0000-0000-000000000002"),
-        "name": "Transit Egress Gate",
-        "type": "gate",
-        "capacity": 5000,
-        "parent_zone_id": None,
-        "status": "open",
-    },
-}
-
-_measurements = []
-_predictions = []
-_risk_scores = {}
-_alerts = {}
-_guidance = []
-_feedback = []
-_incidents = []
-_interventions = []
-_zone_staffing = {
-    "00000000-0000-0000-0000-000000000001": 20,
-    "00000000-0000-0000-0000-000000000002": 15,
-    "00000000-0000-0000-0000-000000000003": 25,
-    "00000000-0000-0000-0000-000000000004": 10,
-    "00000000-0000-0000-0000-000000000005": 25,
-    "00000000-0000-0000-0000-000000000006": 20,
-    "00000000-0000-0000-0000-000000000007": 25,
-    "00000000-0000-0000-0000-000000000008": 35,
-    "00000000-0000-0000-0000-000000000009": 15,
-    "00000000-0000-0000-0000-000000000010": 20,
-}
+def utc_now() -> datetime:
+    return datetime.now(UTC)
 
 
-# Async bridge helper to run async queries in sync database context safely
-def run_async(coro):
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-
-    # If active event loop is running, delegate execution to a safe background thread
-    result = None
-    exception = None
-
-    def worker():
-        nonlocal result, exception
-        try:
-            result = asyncio.run(coro)
-        except Exception as e:
-            exception = e
-
-    thread = threading.Thread(target=worker)
-    thread.start()
-    thread.join()
-
-    if exception:
-        raise exception
-    return result
+# Thread-local / Global DB connection variables
+_engine = None
+_SessionLocal = None
+_fallback_active = False
 
 
-# Connection Pool Setup
-_pool: asyncpg.Pool | None = None
-_pool_lock = threading.Lock()
-_init_attempted = False
+def custom_json_serializer(obj):
+    def default(o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+        raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
+
+    return json.dumps(obj, default=default)
 
 
-async def _seed_database_if_empty() -> None:
-    global _pool
-    if not _pool:
-        return
-    async with _pool.acquire() as conn:
-        # Load schema.sql to initialize tables
-        schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")  # noqa: ASYNC240
-        if os.path.exists(schema_path):  # noqa: ASYNC240
-            with open(schema_path) as f:  # noqa: ASYNC230
-                schema_sql = f.read()
-            await conn.execute(schema_sql)
-            await conn.execute(
-                "ALTER TABLE guidance_messages ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'PENDING_APPROVAL'"
-            )
+def init_db() -> None:
+    """Initializes standard SQLAlchemy engine, fallback engine, and schema creation."""
+    import sys
 
-        count = await conn.fetchval("SELECT COUNT(*) FROM venues")
-        if count == 0:
-            logger.info("Database is empty. Seeding initial events, venues, and zones...")
-            
-            # Seeding Venues
-            venues_to_seed = [
-                (
-                    UUID("b0000000-0000-0000-0000-000000000000"),
-                    "Lucusa Stadium",
-                    "Lucusa",
-                    "Lusaka",
-                    "UTC",
-                    json.dumps({"latitude": -15.4167, "longitude": 28.2833}),
-                ),
-                (
-                    UUID("b0000000-0000-0000-0000-000000000001"),
-                    "City Arena",
-                    "Lucusa",
-                    "Lusaka",
-                    "UTC",
-                    json.dumps({"latitude": -15.4300, "longitude": 28.3100}),
-                ),
-                (
-                    UUID("b0000000-0000-0000-0000-000000000002"),
-                    "Downtown Fan Zone",
-                    "Lucusa",
-                    "Lusaka",
-                    "UTC",
-                    json.dumps({"latitude": -15.4050, "longitude": 28.2700}),
-                ),
-            ]
-            for v_id, name, city, country, tz, metadata in venues_to_seed:
-                await conn.execute(
-                    "INSERT INTO venues (id, name, city, country, timezone, metadata_json) VALUES ($1, $2, $3, $4, $5, $6)",
-                    v_id,
-                    name,
-                    city,
-                    country,
-                    tz,
-                    metadata,
-                )
-
-            # Seeding Events
-            events_to_seed = [
-                (
-                    UUID("e0000000-0000-0000-0000-000000000000"),
-                    "FIFA World Cup 2026 - Opening Match",
-                    "Opening match at the stadium",
-                    "active",
-                    datetime(2026, 6, 11, 18, 0, 0),
-                    datetime(2026, 6, 11, 22, 0, 0),
-                    UUID("b0000000-0000-0000-0000-000000000000"),
-                ),
-                (
-                    UUID("e0000000-0000-0000-0000-000000000001"),
-                    "FIFA World Cup 2026 - Group B Match",
-                    "Group Stage B match",
-                    "active",
-                    datetime(2026, 6, 12, 15, 0, 0),
-                    datetime(2026, 6, 12, 19, 0, 0),
-                    UUID("b0000000-0000-0000-0000-000000000001"),
-                ),
-                (
-                    UUID("e0000000-0000-0000-0000-000000000002"),
-                    "World Cup City Live Watch Party",
-                    "Downtown watch party under the stars",
-                    "active",
-                    datetime(2026, 6, 12, 18, 0, 0),
-                    datetime(2026, 6, 12, 23, 0, 0),
-                    UUID("b0000000-0000-0000-0000-000000000002"),
-                ),
-            ]
-            for ev_id, name, desc, status, start, end, v_id in events_to_seed:
-                await conn.execute(
-                    "INSERT INTO events (id, name, description, status, starts_at, ends_at, venue_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-                    ev_id,
-                    name,
-                    desc,
-                    status,
-                    start,
-                    end,
-                    v_id,
-                )
-
-            # Seeding Zones
-            zones_data = [
-                # Lucusa Stadium
-                (UUID("00000000-0000-0000-0000-000000000001"), UUID("e0000000-0000-0000-0000-000000000000"), "North Gate", "gate", 2000, "open"),
-                (UUID("00000000-0000-0000-0000-000000000002"), UUID("e0000000-0000-0000-0000-000000000000"), "East Concourse", "concourse", 5000, "open"),
-                (UUID("00000000-0000-0000-0000-000000000003"), UUID("e0000000-0000-0000-0000-000000000000"), "Gate C", "gate", 1500, "open"),
-                (UUID("00000000-0000-0000-0000-000000000004"), UUID("e0000000-0000-0000-0000-000000000000"), "West Entrance", "gate", 1800, "open"),
-                # City Arena
-                (UUID("00000000-0000-0000-0000-000000000005"), UUID("e0000000-0000-0000-0000-000000000001"), "Main Entry Gate", "gate", 3000, "open"),
-                (UUID("00000000-0000-0000-0000-000000000006"), UUID("e0000000-0000-0000-0000-000000000001"), "South Concourse", "concourse", 4000, "open"),
-                (UUID("00000000-0000-0000-0000-000000000007"), UUID("e0000000-0000-0000-0000-000000000001"), "North Gate Stand", "gate", 2500, "open"),
-                # Downtown Fan Zone
-                (UUID("00000000-0000-0000-0000-000000000008"), UUID("e0000000-0000-0000-0000-000000000002"), "Screening Plaza", "concourse", 8000, "open"),
-                (UUID("00000000-0000-0000-0000-000000000009"), UUID("e0000000-0000-0000-0000-000000000002"), "Food & Beverage Court", "concourse", 3000, "open"),
-                (UUID("00000000-0000-0000-0000-000000000010"), UUID("e0000000-0000-0000-0000-000000000002"), "Transit Egress Gate", "gate", 5000, "open"),
-            ]
-            for z_id, ev_id, name, z_type, cap, status in zones_data:
-                await conn.execute(
-                    "INSERT INTO zones (id, event_id, name, zone_type, capacity, status) VALUES ($1, $2, $3, $4, $5, $6)",
-                    z_id,
-                    ev_id,
-                    name,
-                    z_type,
-                    cap,
-                    status,
-                )
-
-
-def get_db_pool() -> asyncpg.Pool | None:
-    global _pool, _init_attempted
+    global _engine, _SessionLocal, _fallback_active
     settings = get_settings()
-    if not settings.database_url:
-        return None
+    db_url = settings.database_url
 
-    if _pool is not None:
-        return _pool
+    if "pytest" in sys.modules:
+        _fallback_active = True
+        db_url = "sqlite:///:memory:"
+    elif not db_url:
+        _fallback_active = True
+        db_url = "sqlite:///:memory:"
 
-    with _pool_lock:
-        if _pool is not None or _init_attempted:
-            return _pool
-        _init_attempted = True
-        try:
-            logger.info("Initializing Supabase database connection pool...")
-            _pool = run_async(
-                asyncpg.create_pool(
-                    dsn=settings.database_url,
-                    min_size=1,
-                    max_size=5,
+    from sqlalchemy.pool import StaticPool
+
+    try:
+        if db_url.startswith("sqlite"):
+            if db_url == "sqlite:///:memory:":
+                _engine = create_engine(
+                    db_url,
+                    connect_args={"check_same_thread": False},
+                    poolclass=StaticPool,
+                    json_serializer=custom_json_serializer,
+                )
+            else:
+                _engine = create_engine(
+                    db_url,
+                    connect_args={"check_same_thread": False},
+                    json_serializer=custom_json_serializer,
+                )
+        else:
+            _engine = create_engine(
+                db_url,
+                pool_pre_ping=True,
+                json_serializer=custom_json_serializer,
+            )
+
+        # Test connection
+        with _engine.connect():
+            pass
+        _SessionLocal = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
+    except Exception as e:
+        logger.warning(
+            f"Connection to primary database failed: {e}. Defaulting to isolated SQLite fallback."
+        )
+        _fallback_active = True
+        _engine = create_engine(
+            "sqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+            json_serializer=custom_json_serializer,
+        )
+        _SessionLocal = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
+
+    # Initialize all SQLAlchemy tables
+    Base.metadata.create_all(_engine)
+
+    if _fallback_active or db_url.startswith("sqlite"):
+        with contextlib.closing(_SessionLocal()) as db:
+            _seed_baseline_data(db)
+
+
+def _seed_baseline_data(db: Session) -> None:
+    """Seeds baseline Lucusa stadium event information for test suites and development fallbacks."""
+    if db.query(Stadium).count() > 0:
+        return
+
+    # Seed Venues
+    stadiums = [
+        Stadium(
+            id=UUID("b0000000-0000-0000-0000-000000000000"),
+            name="Lucusa Stadium",
+            city="Lucusa",
+            country="Lusaka",
+            capacity=85000,
+            latitude=-15.4167,
+            longitude=28.2833,
+        ),
+        Stadium(
+            id=UUID("b0000000-0000-0000-0000-000000000001"),
+            name="City Arena",
+            city="Lucusa",
+            country="Lusaka",
+            capacity=45000,
+            latitude=-15.4300,
+            longitude=28.3100,
+        ),
+        Stadium(
+            id=UUID("b0000000-0000-0000-0000-000000000002"),
+            name="Downtown Fan Zone",
+            city="Lucusa",
+            country="Lusaka",
+            capacity=25000,
+            latitude=-15.4050,
+            longitude=28.2700,
+        ),
+    ]
+    for s in stadiums:
+        db.add(s)
+    db.commit()
+
+    # Seed Events
+    events = [
+        Event(
+            id=UUID("e0000000-0000-0000-0000-000000000000"),
+            stadium_id=stadiums[0].id,
+            name="FIFA World Cup 2026 - Opening Match",
+            date=datetime(2026, 6, 11, 18, 0, 0),
+            attendance=75000,
+            description="Opening match at the stadium",
+            status="active",
+            starts_at=datetime(2026, 6, 11, 18, 0, 0),
+            ends_at=datetime(2026, 6, 11, 22, 0, 0),
+        ),
+        Event(
+            id=UUID("e0000000-0000-0000-0000-000000000001"),
+            stadium_id=stadiums[1].id,
+            name="FIFA World Cup 2026 - Group B Match",
+            date=datetime(2026, 6, 12, 15, 0, 0),
+            attendance=42000,
+            description="Group Stage B match",
+            status="active",
+            starts_at=datetime(2026, 6, 12, 15, 0, 0),
+            ends_at=datetime(2026, 6, 12, 19, 0, 0),
+        ),
+        Event(
+            id=UUID("e0000000-0000-0000-0000-000000000002"),
+            stadium_id=stadiums[2].id,
+            name="World Cup City Live Watch Party",
+            date=datetime(2026, 6, 12, 18, 0, 0),
+            attendance=18000,
+            description="Downtown watch party under the stars",
+            status="active",
+            starts_at=datetime(2026, 6, 12, 18, 0, 0),
+            ends_at=datetime(2026, 6, 12, 23, 0, 0),
+        ),
+    ]
+    for e in events:
+        db.add(e)
+    db.commit()
+
+    # Seed Zones
+    zones = [
+        # Lucusa Stadium
+        Zone(
+            id=UUID("00000000-0000-0000-0000-000000000001"),
+            event_id=events[0].id,
+            name="North Gate",
+            zone_type="gate",
+            capacity=2000,
+            status="open",
+        ),
+        Zone(
+            id=UUID("00000000-0000-0000-0000-000000000002"),
+            event_id=events[0].id,
+            name="East Concourse",
+            zone_type="concourse",
+            capacity=5000,
+            status="open",
+        ),
+        Zone(
+            id=UUID("00000000-0000-0000-0000-000000000003"),
+            event_id=events[0].id,
+            name="Gate C",
+            zone_type="gate",
+            capacity=1500,
+            status="open",
+        ),
+        Zone(
+            id=UUID("00000000-0000-0000-0000-000000000004"),
+            event_id=events[0].id,
+            name="West Entrance",
+            zone_type="gate",
+            capacity=1800,
+            status="open",
+        ),
+        # City Arena
+        Zone(
+            id=UUID("00000000-0000-0000-0000-000000000005"),
+            event_id=events[1].id,
+            name="Main Entry Gate",
+            zone_type="gate",
+            capacity=3000,
+            status="open",
+        ),
+        Zone(
+            id=UUID("00000000-0000-0000-0000-000000000006"),
+            event_id=events[1].id,
+            name="South Concourse",
+            zone_type="concourse",
+            capacity=4000,
+            status="open",
+        ),
+        Zone(
+            id=UUID("00000000-0000-0000-0000-000000000007"),
+            event_id=events[1].id,
+            name="North Gate Stand",
+            zone_type="gate",
+            capacity=2500,
+            status="open",
+        ),
+        # Downtown Fan Zone
+        Zone(
+            id=UUID("00000000-0000-0000-0000-000000000008"),
+            event_id=events[2].id,
+            name="Screening Plaza",
+            zone_type="concourse",
+            capacity=8000,
+            status="open",
+        ),
+        Zone(
+            id=UUID("00000000-0000-0000-0000-000000000009"),
+            event_id=events[2].id,
+            name="Food & Beverage Court",
+            zone_type="concourse",
+            capacity=3000,
+            status="open",
+        ),
+        Zone(
+            id=UUID("00000000-0000-0000-0000-000000000010"),
+            event_id=events[2].id,
+            name="Transit Egress Gate",
+            zone_type="gate",
+            capacity=5000,
+            status="open",
+        ),
+    ]
+    for z in zones:
+        db.add(z)
+    db.commit()
+
+    # Seed Cameras for all zones
+    for zone in zones:
+        zone_id_str = str(zone.id)
+        if zone.name == "North Gate":
+            db.add(
+                Camera(
+                    id=f"{zone_id_str}-cam-1",
+                    zone_id=zone.id,
+                    name="North Entrance Turnstiles - Cam 1",
+                    fps=30,
+                    accuracy=0.94,
+                    status="active",
                 )
             )
-            run_async(_seed_database_if_empty())
-            logger.info("Supabase database connection initialized successfully.")
-        except Exception as e:
-            logger.warning(
-                f"Failed to connect to Supabase database. Falling back to in-memory: {e}"
+        elif zone.name == "East Concourse":
+            db.add(
+                Camera(
+                    id=f"{zone_id_str}-cam-1",
+                    zone_id=zone.id,
+                    name="East Concourse Central - Cam 1",
+                    fps=30,
+                    accuracy=0.96,
+                    status="active",
+                )
             )
-            _pool = None
+            db.add(
+                Camera(
+                    id=f"{zone_id_str}-cam-2",
+                    zone_id=zone.id,
+                    name="East Concourse Exit Stairwell - Cam 2",
+                    fps=24,
+                    accuracy=0.91,
+                    status="active",
+                )
+            )
+        elif zone.name == "Gate C":
+            db.add(
+                Camera(
+                    id=f"{zone_id_str}-cam-1",
+                    zone_id=zone.id,
+                    name="Gate C Main Turnstile - Cam 1",
+                    fps=30,
+                    accuracy=0.95,
+                    status="active",
+                )
+            )
+        elif zone.name == "West Entrance":
+            db.add(
+                Camera(
+                    id=f"{zone_id_str}-cam-1",
+                    zone_id=zone.id,
+                    name="West Plaza Entry - Cam 1",
+                    fps=30,
+                    accuracy=0.93,
+                    status="active",
+                )
+            )
+        else:
+            db.add(
+                Camera(
+                    id=f"{zone_id_str}-cam-1",
+                    zone_id=zone.id,
+                    name=f"{zone.name} Monitoring - Cam 1",
+                    fps=24,
+                    accuracy=0.92,
+                    status="active",
+                )
+            )
 
-    return _pool
-
-
-# --- Database Queries mapping to PostgreSQL or local fallbacks ---
-
-
-# Events
-async def _get_all_events() -> list[dict]:
-    pool = get_db_pool()
-    if not pool:
-        return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            "SELECT id, name, description, status, starts_at, ends_at, venue_id FROM events"
+    # Seed Volunteers
+    volunteers_data = [
+        {
+            "name": "Mateo Silva",
+            "languages": "Spanish,English",
+            "skills": "First Aid,Egress Support",
+            "location": "Fan Zone A",
+        },
+        {
+            "name": "Sofia Hernandez",
+            "languages": "Spanish,French",
+            "skills": "Crowd Guidance,Translation",
+            "location": "Fan Zone A",
+        },
+        {
+            "name": "Carlos Gomez",
+            "languages": "Spanish,English",
+            "skills": "Ticketing,First Aid",
+            "location": "Gate C",
+        },
+        {
+            "name": "Elena Rostova",
+            "languages": "Russian,English",
+            "skills": "Translation,VIP Escort",
+            "location": "VIP Stand",
+        },
+        {
+            "name": "Kenji Sato",
+            "languages": "Japanese,English",
+            "skills": "Crowd Guidance,Egress Support",
+            "location": "North Concourse",
+        },
+        {
+            "name": "Marie Dubois",
+            "languages": "French,English",
+            "skills": "Translation,First Aid",
+            "location": "East Gate",
+        },
+        {
+            "name": "Lucia Rossi",
+            "languages": "Italian,Spanish",
+            "skills": "Translation,Crowd Guidance",
+            "location": "Fan Zone A",
+        },
+        {
+            "name": "Diego Alvarez",
+            "languages": "Spanish,English",
+            "skills": "First Aid,Crowd Guidance",
+            "location": "Fan Zone A",
+        },
+    ]
+    for v_data in volunteers_data:
+        vol = Volunteer(
+            id=uuid.uuid4(),
+            name=v_data["name"],
+            language=v_data["languages"],
+            skill=v_data["skills"],
+            availability="Available",
+            assigned_zone=v_data["location"],
         )
-        return [dict(row) for row in rows]
+        db.add(vol)
+
+    # Seed AI Decisions & Execution for mock loops
+    dec = AgentDecision(
+        id=UUID("00000000-0000-0000-0000-000000000001"),
+        agent_name="Crowd Control Agent",
+        recommendation="OPEN_GATE",
+        target="Gate B",
+        confidence=94,
+        reason="Gate C density exceeds safety threshold",
+        expected_impact="Queue duration reduced by 28%",
+        status="PENDING_APPROVAL",
+    )
+    db.add(dec)
+
+    learning_records = [
+        ("OPEN_GATE (Gate B)", "Queue length reduced by 31% within 9 minutes", 94),
+        ("ASSIGN_STAFF (Gate C)", "Crowd stress resolved; queue stabilized in 7 minutes", 89),
+        (
+            "INCREASE_SHUTTLE_FREQUENCY (North Station)",
+            "Train terminal egress cleared 11 minutes faster than average",
+            91,
+        ),
+    ]
+    for action, outcome, score in learning_records:
+        rec = HistoricalRecord(
+            id=uuid.uuid4(),
+            event_name="Reinforcement Learning Sync",
+            action=action,
+            outcome=outcome,
+            effectiveness=score,
+            historical_success_rate=f"{score - 2}%",
+        )
+        db.add(rec)
+
+    db.commit()
+
+
+@contextlib.contextmanager
+def get_db_session() -> Session:
+    """Yields database session context manager."""
+    global _SessionLocal
+    if not _SessionLocal:
+        init_db()
+    db = _SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_db_pool() -> Session | None:
+    """Mock connection pool compatibility layer."""
+    global _SessionLocal
+    if not _SessionLocal:
+        init_db()
+    if _fallback_active:
+        return None
+    return _engine
+
+
+# --- Event Coordinator Queries ---
 
 
 def get_all_events() -> list[dict]:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_all_events())
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        return list(_events.values())
-
-
-async def _get_event_by_id(event_id: UUID) -> dict | None:
-    pool = get_db_pool()
-    if not pool:
-        return None
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT id, name, description, status, starts_at, ends_at, venue_id FROM events WHERE id = $1",
-            event_id,
-        )
-        return dict(row) if row else None
+    with get_db_session() as db:
+        return EventRepository(db).get_all_events()
 
 
 def get_event_by_id(event_id: UUID) -> dict | None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_event_by_id(event_id))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        return _events.get(event_id)
+    with get_db_session() as db:
+        return EventRepository(db).get_event_by_id(event_id)
 
 
-# Venues
-async def _get_all_venues() -> list[dict]:
-    pool = get_db_pool()
-    if not pool:
-        return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            "SELECT id, name, city, country, timezone, metadata_json FROM venues"
-        )
-        results = []
-        for row in rows:
-            d = dict(row)
-            d["metadata"] = json.loads(d.pop("metadata_json") or "{}")
-            results.append(d)
-        return results
+# --- Stadium & Venue Queries ---
 
 
 def get_all_venues() -> list[dict]:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_all_venues())
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        return list(_venues.values())
-
-
-async def _get_venue_by_id(venue_id: UUID) -> dict | None:
-    pool = get_db_pool()
-    if not pool:
-        return None
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT id, name, city, country, timezone, metadata_json FROM venues WHERE id = $1",
-            venue_id,
-        )
-        if row:
-            d = dict(row)
-            d["metadata"] = json.loads(d.pop("metadata_json") or "{}")
-            return d
-        return None
+    with get_db_session() as db:
+        return StadiumRepository(db).get_all_stadiums()
 
 
 def get_venue_by_id(venue_id: UUID) -> dict | None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_venue_by_id(venue_id))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        return _venues.get(venue_id)
-
-
-async def _get_events_for_venue(venue_id: UUID) -> list[dict]:
-    pool = get_db_pool()
-    if not pool:
-        return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            "SELECT id, name, description, status, starts_at, ends_at, venue_id FROM events WHERE venue_id = $1",
-            venue_id,
-        )
-        return [dict(row) for row in rows]
+    with get_db_session() as db:
+        return StadiumRepository(db).get_stadium_by_id(venue_id)
 
 
 def get_events_for_venue(venue_id: UUID) -> list[dict]:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_events_for_venue(venue_id))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        return [e for e in _events.values() if e.get("venue_id") == venue_id]
+    with get_db_session() as db:
+        return EventRepository(db).get_events_for_venue(venue_id)
 
 
-# Zones
-async def _get_zones_for_event(event_id: UUID, zone_type: str | None = None) -> list[dict]:
-    pool = get_db_pool()
-    if not pool:
-        return []
-    async with pool.acquire() as conn:
-        if zone_type:
-            rows = await conn.fetch(
-                "SELECT id, event_id, name, zone_type as type, capacity, parent_zone_id, status FROM zones WHERE event_id = $1 AND zone_type = $2",
-                event_id,
-                zone_type,
-            )
-        else:
-            rows = await conn.fetch(
-                "SELECT id, event_id, name, zone_type as type, capacity, parent_zone_id, status FROM zones WHERE event_id = $1",
-                event_id,
-            )
-        return [dict(row) for row in rows]
+# --- Zone Queries ---
 
 
 def get_zones_for_event(event_id: UUID, zone_type: str | None = None) -> list[dict]:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_zones_for_event(event_id, zone_type))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        results = [z for z in _zones.values() if z["event_id"] == event_id]
-        if zone_type:
-            results = [z for z in results if z["type"] == zone_type]
-        return results
-
-
-async def _get_zone_by_id(zone_id: UUID) -> dict | None:
-    pool = get_db_pool()
-    if not pool:
-        return None
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT id, event_id, name, zone_type as type, capacity, parent_zone_id, status FROM zones WHERE id = $1",
-            zone_id,
-        )
-        return dict(row) if row else None
+    with get_db_session() as db:
+        return StadiumRepository(db).get_zones_for_event(event_id, zone_type)
 
 
 def get_zone_by_id(zone_id: UUID) -> dict | None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_zone_by_id(zone_id))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        return _zones.get(zone_id)
+    with get_db_session() as db:
+        return StadiumRepository(db).get_zone_by_id(zone_id)
 
 
-# Measurements
-async def _add_measurement(m: dict) -> None:
-    pool = get_db_pool()
-    if not pool:
-        return
-    async with pool.acquire() as conn:
-        await conn.execute(
-            "INSERT INTO crowd_measurements (id, zone_id, measured_at, density_count, flow_rate_per_minute, queue_length, source_type, confidence, ingested_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-            m["id"],
-            m["zone_id"],
-            m["measured_at"],
-            m["density_count"],
-            m["flow_rate_per_minute"],
-            m["queue_length"],
-            m["source_type"],
-            m["confidence"],
-            m["ingested_at"],
-        )
+# --- Crowd Measurement Queries ---
 
 
 def add_measurement(measurement: dict) -> None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            run_async(_add_measurement(measurement))
-            return
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        _measurements.append(measurement)
-
-
-async def _get_all_measurements() -> list[dict]:
-    pool = get_db_pool()
-    if not pool:
-        return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            "SELECT id, zone_id, measured_at, density_count, flow_rate_per_minute, queue_length, source_type, confidence, ingested_at FROM crowd_measurements"
-        )
-        return [dict(row) for row in rows]
+    with get_db_session() as db:
+        StadiumRepository(db).add_measurement(measurement)
 
 
 def get_all_measurements() -> list[dict]:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_all_measurements())
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        return list(_measurements)
+    with get_db_session() as db:
+        return StadiumRepository(db).get_all_measurements()
 
 
-# Predictions
-async def _add_prediction(p: dict) -> None:
-    pool = get_db_pool()
-    if not pool:
-        return
-    async with pool.acquire() as conn:
-        await conn.execute(
-            "INSERT INTO predictions (id, zone_id, horizon_minutes, predicted_density, predicted_queue_length, predicted_flow_rate, confidence_interval_low, confidence_interval_high, generated_at, model_version) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
-            p["id"],
-            p["zone_id"],
-            p["horizon_minutes"],
-            p["predicted_density"],
-            p["predicted_queue_length"],
-            p["predicted_flow_rate"],
-            p["confidence_interval_low"],
-            p["confidence_interval_high"],
-            p["generated_at"],
-            p["model_version"],
-        )
+# --- Predictions Queries ---
 
 
 def add_prediction(prediction: dict) -> None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            run_async(_add_prediction(prediction))
-            return
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        _predictions.append(prediction)
-
-
-async def _get_predictions(
-    event_id: UUID,
-    zone_id: UUID | None = None,
-    horizon_minutes: int | None = None,
-    since: datetime | None = None,
-) -> list[dict]:
-    pool = get_db_pool()
-    if not pool:
-        return []
-    async with pool.acquire() as conn:
-        query = """
-            SELECT p.id, p.zone_id, p.horizon_minutes, p.predicted_density, p.predicted_queue_length, p.predicted_flow_rate, p.confidence_interval_low, p.confidence_interval_high, p.generated_at, p.model_version
-            FROM predictions p
-            JOIN zones z ON p.zone_id = z.id
-            WHERE z.event_id = $1
-        """
-        params = [event_id]
-        if zone_id:
-            params.append(zone_id)
-            query += f" AND p.zone_id = ${len(params)}"
-        if horizon_minutes is not None:
-            params.append(horizon_minutes)
-            query += f" AND p.horizon_minutes = ${len(params)}"
-        if since:
-            params.append(since)
-            query += f" AND p.generated_at >= ${len(params)}"
-
-        rows = await conn.fetch(query, *params)
-        return [dict(row) for row in rows]
+    with get_db_session() as db:
+        StadiumRepository(db).add_prediction(prediction)
 
 
 def get_predictions(
-    event_id: UUID,
-    zone_id: UUID | None = None,
-    horizon_minutes: int | None = None,
-    since: datetime | None = None,
+    event_id: UUID, zone_id: UUID | None = None, horizon_minutes: int | None = None, since=None
 ) -> list[dict]:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_predictions(event_id, zone_id, horizon_minutes, since))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        event_zone_ids = {z["id"] for z in _zones.values() if z["event_id"] == event_id}
-        results = [p for p in _predictions if p["zone_id"] in event_zone_ids]
-
-        if zone_id:
-            results = [p for p in results if p["zone_id"] == zone_id]
-        if horizon_minutes is not None:
-            results = [p for p in results if p["horizon_minutes"] == horizon_minutes]
-        if since:
-            results = [p for p in results if p["generated_at"] >= since]
-
-        return results
+    with get_db_session() as db:
+        # Note: since parameter is ignored in basic SQLite/ORM compatibility queries
+        return StadiumRepository(db).get_predictions(event_id, zone_id, horizon_minutes)
 
 
-# Risk Scores
-async def _update_risk_score(zone_id: UUID, rs: dict) -> None:
-    pool = get_db_pool()
-    if not pool:
-        return
-    async with pool.acquire() as conn:
-        await conn.execute(
-            """
-            INSERT INTO risk_scores (id, zone_id, risk_score, severity, drivers_json, prediction_horizon_minutes, generated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (zone_id) DO UPDATE SET
-                risk_score = EXCLUDED.risk_score,
-                severity = EXCLUDED.severity,
-                drivers_json = EXCLUDED.drivers_json,
-                prediction_horizon_minutes = EXCLUDED.prediction_horizon_minutes,
-                generated_at = EXCLUDED.generated_at
-            """,
-            rs["id"],
-            rs["zone_id"],
-            rs["risk_score"],
-            rs["severity"],
-            json.dumps(rs["drivers"]),
-            rs["prediction_horizon_minutes"],
-            rs["generated_at"],
-        )
+# --- Risk Scores Queries ---
 
 
-def update_risk_score(zone_id: UUID, risk_score: dict) -> None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            run_async(_update_risk_score(zone_id, risk_score))
-            return
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        _risk_scores[zone_id] = risk_score
-
-
-async def _get_latest_risk_scores(event_id: UUID) -> list[dict]:
-    pool = get_db_pool()
-    if not pool:
-        return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            """
-            SELECT r.id, r.zone_id, r.risk_score, r.severity, r.drivers_json, r.prediction_horizon_minutes, r.generated_at
-            FROM risk_scores r
-            JOIN zones z ON r.zone_id = z.id
-            WHERE z.event_id = $1
-            """,
-            event_id,
-        )
-        results = []
-        for row in rows:
-            d = dict(row)
-            d["drivers"] = json.loads(d.pop("drivers_json"))
-            results.append(d)
-        return results
+def update_risk_score(zone_id: UUID, risk_score_data: dict) -> None:
+    with get_db_session() as db:
+        StadiumRepository(db).update_risk_score(zone_id, risk_score_data)
 
 
 def get_latest_risk_scores(event_id: UUID) -> list[dict]:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_latest_risk_scores(event_id))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        event_zone_ids = {z["id"] for z in _zones.values() if z["event_id"] == event_id}
-        return [score for zone_id, score in _risk_scores.items() if zone_id in event_zone_ids]
+    with get_db_session() as db:
+        return StadiumRepository(db).get_latest_risk_scores(event_id)
 
 
-# Alerts
-async def _add_alert(a: dict) -> None:
-    pool = get_db_pool()
-    if not pool:
-        return
-    async with pool.acquire() as conn:
-        await conn.execute(
-            "INSERT INTO alerts (id, zone_id, severity, status, title, description, timestamp, assignee, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-            a["id"],
-            a["zone_id"],
-            a["severity"],
-            a["status"],
-            a["title"],
-            a["description"],
-            a["timestamp"],
-            a.get("assignee"),
-            a.get("notes"),
-        )
+# --- Alerts Queries ---
 
 
-def add_alert(alert: dict) -> None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            run_async(_add_alert(alert))
-            return
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        _alerts[alert["id"]] = alert
-
-
-async def _get_alert_by_id(alert_id: UUID) -> dict | None:
-    pool = get_db_pool()
-    if not pool:
-        return None
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT id, zone_id, severity, status, title, description, timestamp, assignee, notes FROM alerts WHERE id = $1",
-            alert_id,
-        )
-        return dict(row) if row else None
+def add_alert(alert_data: dict) -> None:
+    with get_db_session() as db:
+        IncidentRepository(db).add_alert(alert_data)
 
 
 def get_alert_by_id(alert_id: UUID) -> dict | None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_alert_by_id(alert_id))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        return _alerts.get(alert_id)
-
-
-async def _update_alert(
-    alert_id: UUID, status: str, notes: str | None = None, assignee: str | None = None
-) -> dict | None:
-    pool = get_db_pool()
-    if not pool:
-        return None
-    async with pool.acquire() as conn:
-        query = "UPDATE alerts SET status = $1"
-        params = [status]
-        if notes is not None:
-            params.append(notes)
-            query += f", notes = ${len(params)}"
-        if assignee is not None:
-            params.append(assignee)
-            query += f", assignee = ${len(params)}"
-        params.append(alert_id)
-        query += f" WHERE id = ${len(params)} RETURNING id, zone_id, severity, status, title, description, timestamp, assignee, notes"
-
-        row = await conn.fetchrow(query, *params)
-        return dict(row) if row else None
+    with get_db_session() as db:
+        return IncidentRepository(db).get_alert_by_id(alert_id)
 
 
 def update_alert(
-    alert_id: UUID, status: str, notes: str | None = None, assignee: str | None = None
+    alert_id: UUID, status: str | None = None, notes: str | None = None, assignee: str | None = None
 ) -> dict | None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_update_alert(alert_id, status, notes, assignee))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        if alert_id in _alerts:
-            _alerts[alert_id]["status"] = status
-            if notes is not None:
-                _alerts[alert_id]["notes"] = notes
-            if assignee is not None:
-                _alerts[alert_id]["assignee"] = assignee
-            return _alerts[alert_id]
-        return None
-
-
-async def _get_alerts(
-    event_id: UUID,
-    status: str | None = None,
-    severity: str | None = None,
-    zone_id: UUID | None = None,
-) -> list[dict]:
-    pool = get_db_pool()
-    if not pool:
-        return []
-    async with pool.acquire() as conn:
-        query = """
-            SELECT a.id, a.zone_id, a.severity, a.status, a.title, a.description, a.timestamp, a.assignee, a.notes
-            FROM alerts a
-            JOIN zones z ON a.zone_id = z.id
-            WHERE z.event_id = $1
-        """
-        params = [event_id]
-        if status:
-            params.append(status)
-            query += f" AND a.status = ${len(params)}"
-        if severity:
-            params.append(severity)
-            query += f" AND a.severity = ${len(params)}"
-        if zone_id:
-            params.append(zone_id)
-            query += f" AND a.zone_id = ${len(params)}"
-
-        rows = await conn.fetch(query, *params)
-        return [dict(row) for row in rows]
+    with get_db_session() as db:
+        return IncidentRepository(db).update_alert(alert_id, assignee, status, notes)
 
 
 def get_alerts(
@@ -921,374 +593,160 @@ def get_alerts(
     severity: str | None = None,
     zone_id: UUID | None = None,
 ) -> list[dict]:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_alerts(event_id, status, severity, zone_id))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        event_zone_ids = {z["id"] for z in _zones.values() if z["event_id"] == event_id}
-        results = [a for a in _alerts.values() if a["zone_id"] in event_zone_ids]
-
-        if status:
-            results = [a for a in results if a["status"] == status]
+    with get_db_session() as db:
+        alerts = IncidentRepository(db).get_alerts(event_id, status)
         if severity:
-            results = [a for a in results if a["severity"] == severity]
+            alerts = [alt for alt in alerts if alt["severity"].upper() == severity.upper()]
         if zone_id:
-            results = [a for a in results if a["zone_id"] == zone_id]
+            alerts = [alt for alt in alerts if alt["zone_id"] == zone_id]
+        return alerts
 
-        return results
 
-
-# Guidance
-async def _add_guidance(g: dict) -> None:
-    pool = get_db_pool()
-    if not pool:
-        return
-    async with pool.acquire() as conn:
-        await conn.execute(
-            """
-            INSERT INTO guidance_messages (
-                id, alert_id, audience_role, severity, headline, actions_json, expires_at, payload_json,
-                prompt_version, schema_version, model_provider, model_name, input_context_hash, status
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-            """,
-            g.get("id", g.get("guidance_id")),
-            g["alert_id"],
-            g["audience_role"],
-            g["severity"],
-            g["headline"],
-            json.dumps(g["actions"]),
-            g["expires_at"],
-            json.dumps(g["payload"]),
-            g["prompt_version"],
-            g["schema_version"],
-            g["model_provider"],
-            g["model_name"],
-            g["input_context_hash"],
-            g.get("status", "PENDING_APPROVAL"),
-        )
+# --- Guidance Message Queries ---
 
 
 def add_guidance(guidance_record: dict) -> None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            run_async(_add_guidance(guidance_record))
-            return
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        _guidance.append(guidance_record)
-
-
-async def _get_guidance_for_alert(alert_id: UUID, audience_role: str) -> dict | None:
-    pool = get_db_pool()
-    if not pool:
-        return None
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            """
-            SELECT id, alert_id, audience_role, severity, headline, actions_json, expires_at, payload_json,
-                   prompt_version, schema_version, model_provider, model_name, input_context_hash, status
-            FROM guidance_messages
-            WHERE alert_id = $1 AND audience_role = $2
-            """,
-            alert_id,
-            audience_role,
-        )
-        if row:
-            d = dict(row)
-            d["guidance_id"] = d.pop("id")
-            d["actions"] = json.loads(d.pop("actions_json"))
-            d["payload"] = json.loads(d.pop("payload_json"))
-            return d
-        return None
+    with get_db_session() as db:
+        IncidentRepository(db).add_guidance(guidance_record)
 
 
 def get_guidance_for_alert(alert_id: UUID, audience_role: str) -> dict | None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_guidance_for_alert(alert_id, audience_role))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        for g in _guidance:
-            if g["alert_id"] == alert_id and g["audience_role"] == audience_role:
-                return g
-        return None
-
-
-async def _get_guidance_by_id(guidance_id: UUID) -> dict | None:
-    pool = get_db_pool()
-    if not pool:
-        return None
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            """
-            SELECT id, alert_id, audience_role, severity, headline, actions_json, expires_at, payload_json,
-                   prompt_version, schema_version, model_provider, model_name, input_context_hash, status
-            FROM guidance_messages
-            WHERE id = $1
-            """,
-            guidance_id,
-        )
-        if row:
-            d = dict(row)
-            d["guidance_id"] = d.pop("id")
-            d["actions"] = json.loads(d.pop("actions_json"))
-            d["payload"] = json.loads(d.pop("payload_json"))
-            return d
-        return None
+    with get_db_session() as db:
+        return IncidentRepository(db).get_guidance_for_alert(alert_id, audience_role)
 
 
 def get_guidance_by_id(guidance_id: UUID) -> dict | None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_guidance_by_id(guidance_id))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        for g in _guidance:
-            g_id = g.get("id", g.get("guidance_id"))
-            if g_id == guidance_id:
-                return g
-        return None
-
-
-async def _update_guidance_status(guidance_id: UUID, status: str) -> dict | None:
-    pool = get_db_pool()
-    if not pool:
-        return None
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            """
-            UPDATE guidance_messages
-            SET status = $2
-            WHERE id = $1
-            RETURNING id, alert_id, audience_role, severity, headline, actions_json, expires_at, payload_json,
-                      prompt_version, schema_version, model_provider, model_name, input_context_hash, status
-            """,
-            guidance_id,
-            status,
-        )
-        if row:
-            d = dict(row)
-            d["guidance_id"] = d.pop("id")
-            d["actions"] = json.loads(d.pop("actions_json"))
-            d["payload"] = json.loads(d.pop("payload_json"))
-            return d
-        return None
+    with get_db_session() as db:
+        return IncidentRepository(db).get_guidance_by_id(guidance_id)
 
 
 def update_guidance_status(guidance_id: UUID, status: str) -> dict | None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_update_guidance_status(guidance_id, status))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        for g in _guidance:
-            g_id = g.get("id", g.get("guidance_id"))
-            if g_id == guidance_id:
-                g["status"] = status
-                return g
-        return None
-
-
-# Feedback
-async def _add_feedback(f: dict) -> None:
-    pool = get_db_pool()
-    if not pool:
-        return
-    async with pool.acquire() as conn:
-        await conn.execute(
-            "INSERT INTO feedback (id, zone_id, rating, comment, created_at) VALUES ($1, $2, $3, $4, $5)",
-            f["id"],
-            f["zone_id"],
-            f["rating"],
-            f["comment"],
-            f["created_at"],
-        )
-
-
-def add_feedback(feedback_record: dict) -> None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            run_async(_add_feedback(feedback_record))
-            return
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        _feedback.append(feedback_record)
-
-
-async def _get_all_feedback() -> list[dict]:
-    pool = get_db_pool()
-    if not pool:
-        return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("SELECT id, zone_id, rating, comment, created_at FROM feedback")
-        return [dict(row) for row in rows]
-
-
-def get_all_feedback() -> list[dict]:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_all_feedback())
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        return list(_feedback)
-
-
-async def _get_active_approved_guidance(event_id: UUID) -> list[dict]:
-    pool = get_db_pool()
-    if not pool:
-        return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            """
-            SELECT gm.id, gm.alert_id, gm.audience_role, gm.severity, gm.headline, gm.actions_json, gm.expires_at, gm.payload_json,
-                   gm.prompt_version, gm.schema_version, gm.model_provider, gm.model_name, gm.input_context_hash, gm.status
-            FROM guidance_messages gm
-            JOIN alerts a ON gm.alert_id = a.id
-            JOIN zones z ON a.zone_id = z.id
-            WHERE z.event_id = $1 AND gm.status = 'APPROVED' AND gm.expires_at > $2
-            """,
-            event_id,
-            datetime.now(UTC),
-        )
-        results = []
-        for row in rows:
-            d = dict(row)
-            d["guidance_id"] = d.pop("id")
-            d["actions"] = json.loads(d.pop("actions_json"))
-            d["payload"] = json.loads(d.pop("payload_json"))
-            results.append(d)
-        return results
+    with get_db_session() as db:
+        return IncidentRepository(db).update_guidance_status(guidance_id, status)
 
 
 def get_active_approved_guidance(event_id: UUID) -> list[dict]:
-    pool = get_db_pool()
-    if pool:
-        try:
-            return run_async(_get_active_approved_guidance(event_id))
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        now = datetime.now(UTC)
-        results = []
-        for g in _guidance:
-            alert = _alerts.get(g["alert_id"])
-            if not alert:
-                continue
-            zone = _zones.get(alert["zone_id"])
-            if not zone or zone["event_id"] != event_id:
-                continue
-            expires = g["expires_at"]
-            if expires.tzinfo is None:
-                expires = expires.replace(tzinfo=UTC)
-            if g.get("status") == "APPROVED" and expires > now:
-                results.append(g)
-        return results
+    with get_db_session() as db:
+        return IncidentRepository(db).get_active_approved_guidance(event_id)
 
 
-# DB Reset Utility
-async def _clear_database() -> None:
-    pool = get_db_pool()
-    if not pool:
-        return
-    async with pool.acquire() as conn:
-        await conn.execute(
-            "TRUNCATE TABLE crowd_measurements, predictions, risk_scores, alerts, guidance_messages, feedback CASCADE"
-        )
+# --- Feedback Queries ---
 
 
-def clear_database() -> None:
-    pool = get_db_pool()
-    if pool:
-        try:
-            run_async(_clear_database())
-        except Exception as e:
-            logger.warning(f"Postgres query failed: {e}. Falling back to in-memory.")
-    with _lock:
-        _measurements.clear()
-        _predictions.clear()
-        _risk_scores.clear()
-        _alerts.clear()
-        _guidance.clear()
-        _feedback.clear()
-        _incidents.clear()
-        _interventions.clear()
-        _zone_staffing.clear()
-        _zone_staffing.update(
-            {
-                "00000000-0000-0000-0000-000000000001": 20,
-                "00000000-0000-0000-0000-000000000002": 15,
-                "00000000-0000-0000-0000-000000000003": 25,
-                "00000000-0000-0000-0000-000000000004": 10,
-            }
-        )
+def add_feedback(feedback_record: dict) -> None:
+    with get_db_session() as db:
+        StadiumRepository(db).add_feedback(feedback_record)
+
+
+def get_all_feedback() -> list[dict]:
+    with get_db_session() as db:
+        return StadiumRepository(db).get_all_feedback()
+
+
+# --- Staffing & Volunteers Queries ---
 
 
 def get_zone_staffing(event_id: UUID) -> dict[str, int]:
-    with _lock:
-        return dict(_zone_staffing)
+    with get_db_session() as db:
+        return EventRepository(db).get_zone_staffing(event_id)
 
 
 def update_zone_staffing(event_id: UUID, zone_id: UUID, count: int) -> None:
-    with _lock:
-        _zone_staffing[str(zone_id)] = count
+    with get_db_session() as db:
+        EventRepository(db).update_zone_staffing(event_id, zone_id, count)
+
+
+def get_all_volunteers() -> list[dict]:
+    with get_db_session() as db:
+        return VolunteerRepository(db).get_all_volunteers()
+
+
+# --- Incidents Queries ---
 
 
 def add_incident(incident: dict) -> None:
-    with _lock:
-        _incidents.append(incident)
+    with get_db_session() as db:
+        IncidentRepository(db).add_incident(incident)
 
 
 def get_incidents(event_id: UUID) -> list[dict]:
-    with _lock:
-        return [i for i in _incidents if i["event_id"] == event_id]
+    with get_db_session() as db:
+        return IncidentRepository(db).get_incidents(event_id)
 
 
 def update_incident_status(
-    event_id: UUID, incident_id: UUID, status: str, responder: str | None = None
+    event_id: UUID, incident_id: UUID, status: str, responder_name: str | None = None
 ) -> dict | None:
-    with _lock:
-        for i in _incidents:
-            if i["event_id"] == event_id and i["id"] == incident_id:
-                i["status"] = status
-                if responder:
-                    i["responder_name"] = responder
-                if status == "RESOLVED":
-                    i["resolved_at"] = datetime.now(UTC)
-                return i
-        return None
+    with get_db_session() as db:
+        return IncidentRepository(db).update_incident_status(incident_id, status, responder_name)
+
+
+# --- Cameras & Interventions ---
+
+
+def get_cameras_for_event(event_id: UUID) -> list[dict]:
+    with get_db_session() as db:
+        return StadiumRepository(db).get_cameras_for_event(event_id)
+
+
+def get_zone_links(event_id: UUID) -> list[dict]:
+    with get_db_session() as db:
+        return StadiumRepository(db).get_zone_links(event_id)
 
 
 def add_intervention(intervention: dict) -> None:
-    with _lock:
-        _interventions.append(intervention)
+    with get_db_session() as db:
+        i = Intervention(
+            id=intervention["id"],
+            event_id=intervention["event_id"],
+            zone_id=intervention["zone_id"],
+            type=intervention["type"],
+            description=intervention["description"],
+            trigger_tick=intervention["trigger_tick"],
+            pre_density=intervention["pre_density"],
+            pre_risk=intervention["pre_risk"],
+            post_density=intervention["post_density"],
+            post_risk=intervention["post_risk"],
+            timestamp=intervention.get("timestamp") or utc_now(),
+        )
+        db.add(i)
+        db.commit()
 
 
 def get_interventions(event_id: UUID) -> list[dict]:
-    with _lock:
-        return [i for i in _interventions if i["event_id"] == event_id]
+    with get_db_session() as db:
+        records = db.query(Intervention).filter(Intervention.event_id == event_id).all()
+        return [
+            {
+                "id": r.id,
+                "event_id": r.event_id,
+                "zone_id": r.zone_id,
+                "type": r.type,
+                "description": r.description,
+                "trigger_tick": r.trigger_tick,
+                "pre_density": r.pre_density,
+                "pre_risk": r.pre_risk,
+                "post_density": r.post_density,
+                "post_risk": r.post_risk,
+                "timestamp": r.timestamp,
+            }
+            for r in records
+        ]
 
 
 def update_intervention(event_id: UUID, intervention_id: UUID, updates: dict) -> None:
-    with _lock:
-        for i in _interventions:
-            if i["event_id"] == event_id and i["id"] == intervention_id:
-                i.update(updates)
-                return
+    with get_db_session() as db:
+        r = (
+            db.query(Intervention)
+            .filter(Intervention.event_id == event_id, Intervention.id == intervention_id)
+            .first()
+        )
+        if r:
+            if "post_density" in updates:
+                r.post_density = updates["post_density"]
+            if "post_risk" in updates:
+                r.post_risk = updates["post_risk"]
+            db.commit()
 
 
 def log_intervention_action(event_id: UUID, zone_id: UUID, type_str: str, description: str) -> None:
@@ -1298,7 +756,7 @@ def log_intervention_action(event_id: UUID, zone_id: UUID, type_str: str, descri
     zone_measurements = [m for m in measurements if m["zone_id"] == zone_id]
     latest_m = max(zone_measurements, key=lambda x: x["measured_at"]) if zone_measurements else None
 
-    zone = _zones.get(zone_id)
+    zone = get_zone_by_id(zone_id)
     capacity = zone["capacity"] if zone else 500
     density_percentage = 0
     if latest_m and capacity > 0:
@@ -1319,151 +777,140 @@ def log_intervention_action(event_id: UUID, zone_id: UUID, type_str: str, descri
         "pre_risk": pre_risk,
         "post_density": None,
         "post_risk": None,
-        "timestamp": datetime.now(UTC),
+        "timestamp": utc_now(),
     }
     add_intervention(intervention)
 
 
 def resolve_pending_interventions(event_id: UUID) -> None:
-    with _lock:
-        measurements = list(_measurements)
+    with get_db_session() as db:
+        measurements = get_all_measurements()
         current_tick = len(measurements) // 4
 
-        for i in _interventions:
-            if i["event_id"] == event_id and i["post_density"] is None:
-                # Resolve after 2 ticks
-                if current_tick >= i["trigger_tick"] + 2:
-                    zone_id = i["zone_id"]
-                    zone_measurements = [m for m in measurements if m["zone_id"] == zone_id]
-                    latest_m = (
-                        max(zone_measurements, key=lambda x: x["measured_at"])
-                        if zone_measurements
-                        else None
+        pending = (
+            db.query(Intervention)
+            .filter(Intervention.event_id == event_id, Intervention.post_density.is_(None))
+            .all()
+        )
+
+        for i in pending:
+            # Resolve after 2 ticks
+            if current_tick >= i.trigger_tick + 2:
+                zone_id = i.zone_id
+                zone_measurements = [m for m in measurements if m["zone_id"] == zone_id]
+                latest_m = (
+                    max(zone_measurements, key=lambda x: x["measured_at"])
+                    if zone_measurements
+                    else None
+                )
+
+                zone = get_zone_by_id(zone_id)
+                capacity = zone["capacity"] if zone else 500
+                density_percentage = 0
+                if latest_m and capacity > 0:
+                    density_percentage = round((latest_m["density_count"] / capacity) * 100)
+
+                risk_scores = get_latest_risk_scores(event_id)
+                latest_risk = next((s for s in risk_scores if s["zone_id"] == zone_id), None)
+                post_risk = latest_risk["severity"].upper() if latest_risk else "LOW"
+
+                i.post_density = density_percentage
+                i.post_risk = post_risk
+        db.commit()
+
+
+def clear_database() -> None:
+    """Wipes all records from tables to support isolation resets during tests."""
+    with get_db_session() as db:
+        db.query(GuidanceMessage).delete()
+        db.query(Feedback).delete()
+        db.query(Alert).delete()
+        db.query(RiskScore).delete()
+        db.query(Prediction).delete()
+        db.query(CrowdMeasurement).delete()
+        db.query(Camera).delete()
+        db.query(ZoneStaffing).delete()
+        db.query(Zone).delete()
+        db.query(Incident).delete()
+        db.query(Event).delete()
+        db.query(Stadium).delete()
+        db.query(Volunteer).delete()
+        db.query(ActionExecution).delete()
+        db.query(AgentDecision).delete()
+        db.query(HistoricalRecord).delete()
+        db.query(User).delete()
+        db.query(AuditLog).delete()
+        db.query(Intervention).delete()
+        db.commit()
+
+        # Re-seed baseline data for test integrity
+        _seed_baseline_data(db)
+
+
+def get_city_overview_data() -> list[dict]:
+    """Fetches and aggregates operations statuses across all stadiums in a single DB transaction."""
+    with get_db_session() as db:
+        stadiums = db.query(Stadium).all()
+        result = []
+        for s in stadiums:
+            event = (
+                db.query(Event).filter(Event.stadium_id == s.id, Event.status == "active").first()
+            )
+            if not event:
+                event = db.query(Event).filter(Event.stadium_id == s.id).first()
+
+            avg_density = 45
+            active_incidents = 0
+            active_alerts = 0
+            total_capacity = 0
+            total_stewards = 0
+            risk_level = "LOW"
+            event_name = "No Active Event"
+            event_id = ""
+
+            if event:
+                event_name = event.name
+                event_id = str(event.id)
+                zones = db.query(Zone).filter(Zone.event_id == event.id).all()
+                total_capacity = sum(z.capacity for z in zones) if zones else 0
+                zone_ids = [z.id for z in zones]
+
+                if zone_ids:
+                    risk_scores = db.query(RiskScore).filter(RiskScore.zone_id.in_(zone_ids)).all()
+                    if risk_scores:
+                        severities = [rs.severity.upper() for rs in risk_scores]
+                        if "CRITICAL" in severities:
+                            risk_level = "CRITICAL"
+                        elif "HIGH" in severities:
+                            risk_level = "HIGH"
+                        elif "MEDIUM" in severities:
+                            risk_level = "MEDIUM"
+
+                    alerts = db.query(Alert).filter(Alert.zone_id.in_(zone_ids)).all()
+                    active_incidents = len([a for a in alerts if a.status == "unacknowledged"])
+                    active_alerts = len(alerts)
+
+                    staffing_records = (
+                        db.query(ZoneStaffing).filter(ZoneStaffing.zone_id.in_(zone_ids)).all()
                     )
+                    total_stewards = sum(sr.stewards_count for sr in staffing_records)
 
-                    zone = _zones.get(zone_id)
-                    capacity = zone["capacity"] if zone else 500
-                    density_percentage = 0
-                    if latest_m and capacity > 0:
-                        density_percentage = round((latest_m["density_count"] / capacity) * 100)
-
-                    risk_scores = [score for zone_id, score in _risk_scores.items()]
-                    latest_risk = next((s for s in risk_scores if s["zone_id"] == zone_id), None)
-                    post_risk = latest_risk["severity"].upper() if latest_risk else "LOW"
-
-                    i["post_density"] = density_percentage
-                    i["post_risk"] = post_risk
-
-
-_zone_links = [
-    # Lucusa Stadium links
-    {
-        "source_id": UUID("00000000-0000-0000-0000-000000000001"),
-        "target_id": UUID("00000000-0000-0000-0000-000000000002"),
-        "capacity_flow": 80,
-    },
-    {
-        "source_id": UUID("00000000-0000-0000-0000-000000000003"),
-        "target_id": UUID("00000000-0000-0000-0000-000000000002"),
-        "capacity_flow": 60,
-    },
-    {
-        "source_id": UUID("00000000-0000-0000-0000-000000000004"),
-        "target_id": UUID("00000000-0000-0000-0000-000000000002"),
-        "capacity_flow": 70,
-    },
-    # City Arena links
-    {
-        "source_id": UUID("00000000-0000-0000-0000-000000000005"),
-        "target_id": UUID("00000000-0000-0000-0000-000000000006"),
-        "capacity_flow": 120,
-    },
-    {
-        "source_id": UUID("00000000-0000-0000-0000-000000000007"),
-        "target_id": UUID("00000000-0000-0000-0000-000000000006"),
-        "capacity_flow": 100,
-    },
-    # Downtown Fan Zone links
-    {
-        "source_id": UUID("00000000-0000-0000-0000-000000000010"),
-        "target_id": UUID("00000000-0000-0000-0000-000000000008"),
-        "capacity_flow": 150,
-    },
-    {
-        "source_id": UUID("00000000-0000-0000-0000-000000000008"),
-        "target_id": UUID("00000000-0000-0000-0000-000000000009"),
-        "capacity_flow": 140,
-    },
-]
-
-
-def get_zone_links(event_id: UUID) -> list[dict]:
-    with _lock:
-        event_zones = {z["id"] for z in _zones.values() if z["event_id"] == event_id}
-        return [
-            link
-            for link in _zone_links
-            if link["source_id"] in event_zones and link["target_id"] in event_zones
-        ]
-
-
-def get_cameras_for_event(event_id: UUID) -> list[dict]:
-    with _lock:
-        event_zones = [z for z in _zones.values() if z["event_id"] == event_id]
-        cameras_list = []
-        for zone in event_zones:
-            zone_id_str = str(zone["id"])
-            if zone["name"] == "North Gate":
-                cameras_list.append({
-                    "id": f"{zone_id_str}-cam-1",
-                    "zone_id": zone["id"],
-                    "name": "North Entrance Turnstiles - Cam 1",
-                    "fps": 30,
-                    "accuracy": 0.94,
-                    "status": "active"
-                })
-            elif zone["name"] == "East Concourse":
-                cameras_list.append({
-                    "id": f"{zone_id_str}-cam-1",
-                    "zone_id": zone["id"],
-                    "name": "East Concourse Central - Cam 1",
-                    "fps": 30,
-                    "accuracy": 0.96,
-                    "status": "active"
-                })
-                cameras_list.append({
-                    "id": f"{zone_id_str}-cam-2",
-                    "zone_id": zone["id"],
-                    "name": "East Concourse Exit Stairwell - Cam 2",
-                    "fps": 24,
-                    "accuracy": 0.91,
-                    "status": "active"
-                })
-            elif zone["name"] == "Gate C":
-                cameras_list.append({
-                    "id": f"{zone_id_str}-cam-1",
-                    "zone_id": zone["id"],
-                    "name": "Gate C Main Turnstile - Cam 1",
-                    "fps": 30,
-                    "accuracy": 0.95,
-                    "status": "active"
-                })
-            elif zone["name"] == "West Entrance":
-                cameras_list.append({
-                    "id": f"{zone_id_str}-cam-1",
-                    "zone_id": zone["id"],
-                    "name": "West Plaza Entry - Cam 1",
-                    "fps": 30,
-                    "accuracy": 0.93,
-                    "status": "active"
-                })
-            else:
-                cameras_list.append({
-                    "id": f"{zone_id_str}-cam-1",
-                    "zone_id": zone["id"],
-                    "name": f"{zone['name']} Monitoring - Cam 1",
-                    "fps": 24,
-                    "accuracy": 0.92,
-                    "status": "active"
-                })
-        return cameras_list
+            result.append(
+                {
+                    "id": str(s.id),
+                    "name": s.name,
+                    "city": s.city,
+                    "country": s.country,
+                    "latitude": s.latitude or -15.4167,
+                    "longitude": s.longitude or 28.2833,
+                    "activeEventName": event_name,
+                    "activeEventId": event_id,
+                    "averageDensity": avg_density,
+                    "activeIncidentsCount": active_incidents,
+                    "activeAlertsCount": active_alerts,
+                    "totalCapacity": total_capacity,
+                    "totalStewards": total_stewards,
+                    "riskLevel": risk_level,
+                }
+            )
+        return result

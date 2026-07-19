@@ -244,7 +244,10 @@ export function IncidentConsole() {
     >
       <div className="space-y-6">
         {/* Report Form */}
-        <form onSubmit={handleReport} className="rounded-md border border-white/5 bg-surface-panel p-4 space-y-4">
+        <form
+          onSubmit={handleReport}
+          className="rounded-md border border-white/5 bg-surface-panel p-4 space-y-4"
+        >
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted font-mono">
             Report New Incident
           </h3>

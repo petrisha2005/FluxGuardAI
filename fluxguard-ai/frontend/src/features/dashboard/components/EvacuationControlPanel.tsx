@@ -4,6 +4,7 @@ import {
   cancelEvacuation,
   useSimulationState,
 } from '../../simulation/simulationStore';
+import { RoleGuard } from '@/features/auth';
 
 export function EvacuationControlPanel() {
   const sim = useSimulationState();
@@ -54,29 +55,42 @@ export function EvacuationControlPanel() {
           </div>
 
           <div>
-            {!showConfirm ? (
-              <button
-                onClick={() => setShowConfirm(true)}
-                className="w-full sm:w-auto rounded-lg bg-rose-500/10 border border-rose-500/20 px-4 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                🚨 Trigger Evacuation
-              </button>
-            ) : (
-              <div className="flex items-center gap-2">
+            <RoleGuard
+              allowedRoles={['STADIUM_MANAGER', 'SECURITY_SUPERVISOR', 'SUPER_ADMIN']}
+              fallback={
                 <button
-                  onClick={handleActivate}
-                  className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 active:scale-[0.98] transition-all animate-pulse"
+                  disabled
+                  className="w-full sm:w-auto rounded-lg bg-zinc-800 border border-zinc-700/50 px-4 py-2 text-xs font-bold text-zinc-500 cursor-not-allowed opacity-50"
+                  title="Clearance required: STADIUM_MANAGER or SECURITY_SUPERVISOR"
                 >
-                  Confirm Evac
+                  🚨 Trigger Evacuation
                 </button>
+              }
+            >
+              {!showConfirm ? (
                 <button
-                  onClick={() => setShowConfirm(false)}
-                  className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs font-bold text-ink hover:bg-white/10 transition-all"
+                  onClick={() => setShowConfirm(true)}
+                  className="w-full sm:w-auto rounded-lg bg-rose-500/10 border border-rose-500/20 px-4 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                 >
-                  Cancel
+                  🚨 Trigger Evacuation
                 </button>
-              </div>
-            )}
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleActivate}
+                    className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 active:scale-[0.98] transition-all animate-pulse"
+                  >
+                    Confirm Evac
+                  </button>
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs font-bold text-ink hover:bg-white/10 transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </RoleGuard>
           </div>
         </div>
       ) : (
@@ -94,12 +108,25 @@ export function EvacuationControlPanel() {
               </p>
             </div>
 
-            <button
-              onClick={handleAbort}
-              className="w-full sm:w-auto rounded-lg bg-white/5 border border-white/10 px-4 py-2 text-xs font-bold text-ink hover:bg-white/10 hover:border-white/20 transition-all"
+            <RoleGuard
+              allowedRoles={['STADIUM_MANAGER', 'SECURITY_SUPERVISOR', 'SUPER_ADMIN']}
+              fallback={
+                <button
+                  disabled
+                  className="w-full sm:w-auto rounded-lg bg-zinc-800 border border-zinc-700/50 px-4 py-2 text-xs font-bold text-zinc-500 cursor-not-allowed opacity-50"
+                  title="Clearance required to abort evacuation."
+                >
+                  Abort Evacuation
+                </button>
+              }
             >
-              Abort Evacuation
-            </button>
+              <button
+                onClick={handleAbort}
+                className="w-full sm:w-auto rounded-lg bg-white/5 border border-white/10 px-4 py-2 text-xs font-bold text-ink hover:bg-white/10 hover:border-white/20 transition-all"
+              >
+                Abort Evacuation
+              </button>
+            </RoleGuard>
           </div>
 
           {/* Telemetry HUD Grid */}

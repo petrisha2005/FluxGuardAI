@@ -1,4 +1,3 @@
-from uuid import UUID
 import httpx
 import pytest
 

@@ -3,19 +3,24 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.alerts import router as alerts_router
 from app.api.analytics import router as analytics_router
+from app.api.autonomous_api import router as autonomous_router
+from app.api.copilot import command_center_router as command_center_copilot_router
 from app.api.copilot import router as copilot_router
+from app.api.digital_twin import router as digital_twin_router
 from app.api.events import router as events_router
 from app.api.feedback import router as feedback_router
+from app.api.global_api import router as global_router
 from app.api.guidance import router as guidance_router
 from app.api.health import router as health_router
 from app.api.incidents import router as incidents_router
 from app.api.integrations import router as integrations_router
 from app.api.measurements import router as measurements_router
 from app.api.predictions import router as predictions_router
+from app.api.predictive_engine import router as predictive_engine_router
 from app.api.risk import router as risk_router
 from app.api.staffing import router as staffing_router
-from app.api.websocket import router as ws_router
 from app.api.venues import router as venues_router
+from app.api.websocket import router as ws_router
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
@@ -40,8 +45,15 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
+    from app.auth.auth import router as auth_router
+
+    app.include_router(auth_router)
     app.include_router(health_router)
     app.include_router(ws_router)
+    app.include_router(predictive_engine_router)
+    app.include_router(global_router)
+    app.include_router(autonomous_router)
+    app.include_router(command_center_copilot_router)
     app.include_router(events_router, prefix=settings.api_v1_prefix)
     app.include_router(measurements_router, prefix=settings.api_v1_prefix)
     app.include_router(predictions_router, prefix=settings.api_v1_prefix)
@@ -55,6 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(incidents_router, prefix=settings.api_v1_prefix)
     app.include_router(analytics_router, prefix=settings.api_v1_prefix)
     app.include_router(venues_router, prefix=settings.api_v1_prefix)
+    app.include_router(digital_twin_router, prefix=settings.api_v1_prefix)
 
     return app
 

@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { Button, Panel, Badge } from '@/components/ui';
-import { api } from '@/services/api';
+import { Button, Panel, Badge, AIDecisionCard } from '@/components/ui';
+import { api, type CopilotChatResponse, type CopilotOperationalContext } from '@/services/api';
 import { cn } from '@/utils/classNames';
-import { useSimulationState, getActiveEventId } from '@/features/simulation/simulationStore';
+import { useSimulationState } from '@/features/simulation/simulationStore';
 
 interface ChatMessage {
   id: string;
   sender: 'user' | 'assistant';
   text: string;
+  timestamp: string;
   actions?: string[];
+  metadata?: CopilotChatResponse;
 }
 
 const SUGGESTIONS = [
@@ -22,24 +24,58 @@ const SUGGESTIONS = [
   { label: 'How will weather affect flow?', query: 'How will weather affect crowd flow?' },
 ];
 
+const STORAGE_KEY = 'fluxguard_copilot_history';
+
+function createInitialMessages(): ChatMessage[] {
+  return [
+    {
+      id: 'init-msg',
+      sender: 'assistant',
+      timestamp: new Date().toISOString(),
+      text: 'Hello! I am your FluxGuard AI Command Assistant. I monitor real-time crowd densities, ticketing rates, transit schedules, and weather conditions. Ask me about zone risks, evacuation routes, or operational summaries.',
+    },
+  ];
+}
+
+function loadStoredMessages(): ChatMessage[] {
+  if (typeof window === 'undefined') {
+    return createInitialMessages();
+  }
+
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (!stored) {
+      return createInitialMessages();
+    }
+
+    const parsed = JSON.parse(stored) as ChatMessage[];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : createInitialMessages();
+  } catch {
+    return createInitialMessages();
+  }
+}
+
 export function CopilotPanel({ className }: { className?: string }) {
   const sim = useSimulationState();
-  const activeEventId = getActiveEventId();
 
   const [activeTab, setActiveTab] = useState<'DIRECTIVES' | 'TIMELINE' | 'BRIEFING'>('DIRECTIVES');
   const [selectedPoint, setSelectedPoint] = useState<'CURRENT' | '20MIN' | '40MIN'>('CURRENT');
   const [briefingText, setBriefingText] = useState<string>('');
+  const [directiveStatus, setDirectiveStatus] = useState<'pending' | 'approved' | 'rejected'>(
+    'pending',
+  );
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'init-msg',
-      sender: 'assistant',
-      text: 'Hello! I am your FluxGuard AI Command Assistant. I monitor real-time crowd densities, ticketing rates, transit schedules, and weather conditions. Ask me about zone risks, evacuation routes, or operational summaries.',
-    },
-  ]);
+  useEffect(() => {
+    setDirectiveStatus('pending');
+  }, [sim.tick]);
+
+  const [messages, setMessages] = useState<ChatMessage[]>(loadStoredMessages);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [lastPrompt, setLastPrompt] = useState('');
+  const [requestError, setRequestError] = useState('');
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
@@ -51,6 +87,16 @@ export function CopilotPanel({ className }: { className?: string }) {
     scrollToBottom();
   }, [messages, isLoading]);
 
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-30)));
+  }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   // Auto-generate briefing text if tab is chosen or on load
   useEffect(() => {
     if (activeTab === 'BRIEFING' && !briefingText) {
@@ -59,37 +105,97 @@ export function CopilotPanel({ className }: { className?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, briefingText]);
 
+  const buildCopilotContext = (): CopilotOperationalContext => ({
+    zones: sim.zones.map((zone) => ({
+      id: zone.id,
+      name: zone.name,
+      density: zone.density,
+      queueLength: zone.queueLength,
+      entryRate: zone.entryRate,
+      exitRate: zone.exitRate,
+      risk: zone.risk,
+      lastUpdated: zone.lastUpdated,
+    })),
+    riskAssessments: sim.riskAssessments,
+    events: sim.events,
+    tick: sim.tick,
+    lastUpdated: sim.lastUpdated,
+    isEvacuationActive: Boolean(sim.isEvacuationActive),
+  });
+
   const handleSend = async (textToSend: string) => {
     if (!textToSend.trim() || isLoading) return;
 
+    const trimmedMessage = textToSend.trim();
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
-      text: textToSend,
+      text: trimmedMessage,
+      timestamp: new Date().toISOString(),
     };
 
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setIsLoading(true);
+    setLastPrompt(trimmedMessage);
+    setRequestError('');
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
-      const response = await api.submitCopilotMessage(activeEventId, textToSend);
+      const response = await api.submitCommandCenterCopilotMessage(
+        {
+          message: trimmedMessage,
+          venue: 'FluxGuard AI Stadium Command Center',
+          context: buildCopilotContext(),
+        },
+        { signal: controller.signal, timeoutMs: 12_000, retries: 1 },
+      );
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         sender: 'assistant',
-        text: response.response,
-        actions: response.suggested_actions,
+        text: response.answer,
+        actions: response.recommendations,
+        metadata: response,
+        timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
-    } catch {
+    } catch (error) {
+      const wasAborted = error instanceof DOMException && error.name === 'AbortError';
+      const message = wasAborted
+        ? 'Copilot request stopped by operator.'
+        : error instanceof Error
+          ? error.message
+          : 'Copilot request failed.';
+      setRequestError(message);
       const errorMsg: ChatMessage = {
         id: `error-${Date.now()}`,
         sender: 'assistant',
-        text: 'Sorry, I encountered an issue resolving your query. Please check your backend connection and try again.',
+        text: wasAborted
+          ? 'Stopped. No operational recommendation was issued.'
+          : 'I could not complete the Copilot request. Live telemetry remains visible; please retry or use manual operations protocols.',
+        timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
+      abortControllerRef.current = null;
       setIsLoading(false);
+    }
+  };
+
+  const handleStop = () => {
+    abortControllerRef.current?.abort();
+  };
+
+  const handleClear = () => {
+    setMessages(createInitialMessages());
+    setRequestError('');
+  };
+
+  const handleRegenerate = () => {
+    if (lastPrompt && !isLoading) {
+      handleSend(lastPrompt);
     }
   };
 
@@ -153,7 +259,59 @@ export function CopilotPanel({ className }: { className?: string }) {
                         : 'bg-white/5 text-ink border-white/5',
                     )}
                   >
+                    <div className="mb-1 text-[8px] uppercase tracking-widest opacity-60">
+                      {new Date(msg.timestamp).toLocaleTimeString()}
+                    </div>
                     <p className="whitespace-pre-wrap">{msg.text}</p>
+
+                    {msg.metadata && (
+                      <div className="mt-3 grid gap-2 border-t border-white/5 pt-2 text-[9px]">
+                        <div className="flex flex-wrap gap-1.5">
+                          <Badge
+                            variant={
+                              msg.metadata.risk_level === 'CRITICAL'
+                                ? 'critical'
+                                : msg.metadata.risk_level === 'HIGH'
+                                  ? 'warning'
+                                  : msg.metadata.risk_level === 'MEDIUM'
+                                    ? 'info'
+                                    : 'safe'
+                            }
+                          >
+                            Risk {msg.metadata.risk_level}
+                          </Badge>
+                          <Badge variant="info">
+                            Confidence {Math.round(msg.metadata.confidence * 100)}%
+                          </Badge>
+                          <Badge variant="info">{msg.metadata.priority}</Badge>
+                        </div>
+                        <dl className="grid gap-1 text-ink-muted">
+                          <div>
+                            <dt className="font-bold text-ink-subdued">Affected zones</dt>
+                            <dd>{msg.metadata.affected_zones.join(', ') || 'None specified'}</dd>
+                          </div>
+                          <div>
+                            <dt className="font-bold text-ink-subdued">Recovery time</dt>
+                            <dd>{msg.metadata.recovery_time}</dd>
+                          </div>
+                          <div>
+                            <dt className="font-bold text-ink-subdued">Reasoning</dt>
+                            <dd>{msg.metadata.reasoning}</dd>
+                          </div>
+                          <div>
+                            <dt className="font-bold text-ink-subdued">Impact</dt>
+                            <dd>{msg.metadata.impact}</dd>
+                          </div>
+                        </dl>
+                        <button
+                          type="button"
+                          onClick={() => navigator.clipboard?.writeText(msg.text)}
+                          className="w-fit rounded border border-white/5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-ink-subdued hover:text-brand-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    )}
 
                     {/* Operational Recommendations buttons */}
                     {msg.actions && msg.actions.length > 0 && (
@@ -192,11 +350,27 @@ export function CopilotPanel({ className }: { className?: string }) {
                       <span className="h-1.5 w-1.5 rounded-full bg-brand-primary animate-bounce delay-300" />
                     </div>
                     <span>Analyzing telemetry logs...</span>
+                    <button
+                      type="button"
+                      onClick={handleStop}
+                      className="rounded border border-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-ink hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-primary"
+                    >
+                      Stop
+                    </button>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
+
+          {requestError && (
+            <div
+              role="alert"
+              className="mb-3 rounded border border-risk-warning/30 bg-risk-warning/10 px-3 py-2 text-[10px] font-mono text-risk-warning"
+            >
+              {requestError}
+            </div>
+          )}
 
           {/* Dynamic suggestion chips */}
           <div className="mb-3 border-t border-white/5 pt-3">
@@ -214,6 +388,26 @@ export function CopilotPanel({ className }: { className?: string }) {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="mb-3 flex gap-2">
+            <button
+              type="button"
+              onClick={handleRegenerate}
+              disabled={!lastPrompt || isLoading}
+              aria-label="Regenerate last Copilot answer"
+              className="rounded border border-white/5 bg-white/5 px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-ink-subdued hover:text-brand-primary disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Regenerate
+            </button>
+            <button
+              type="button"
+              onClick={handleClear}
+              disabled={isLoading}
+              className="rounded border border-white/5 bg-white/5 px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-ink-subdued hover:text-brand-primary disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Clear
+            </button>
           </div>
 
           {/* Input submission form */}
@@ -286,37 +480,38 @@ export function CopilotPanel({ className }: { className?: string }) {
                 </div>
 
                 {/* AI Recommendation Details */}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="p-3 bg-surface rounded border border-white/5 space-y-1">
-                    <span className="text-[8px] font-bold font-mono text-ink-subdued uppercase tracking-widest">
-                      AI Directive Recommendation
-                    </span>
-                    <div className="flex items-center gap-1.5 py-1">
-                      <Badge variant={isElevated ? 'critical' : 'info'}>
-                        {isElevated ? 'HIGH PRIORITY' : 'ROUTINE'}
-                      </Badge>
-                      <span className="text-[10px] font-mono text-brand-primary font-bold">
-                        92% CONFIDENCE
-                      </span>
-                    </div>
-                    <p className="text-xs text-ink leading-relaxed font-mono">
-                      {isElevated && highestZone
-                        ? `Open Gate C Secondary Entrance to redistribute ${highestZone.name} visitor load.`
-                        : 'Maintain current gate configuration and monitor gate entry flow rates.'}
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-surface rounded border border-white/5 space-y-1">
-                    <span className="text-[8px] font-bold font-mono text-ink-subdued uppercase tracking-widest">
-                      Explain Recommendation
-                    </span>
-                    <p className="text-xs text-ink-muted leading-relaxed font-mono">
-                      {isElevated && highestZone
-                        ? `Entry volume exceeds discharge capacity at ${highestZone.name} by 37%. Delay to resolve this zone results in safety threshold breaches.`
-                        : 'Current flow rates remain within standard deviations of optimal throughput.'}
-                    </p>
-                  </div>
-                </div>
+                <AIDecisionCard
+                  decisionId={`directive-${sim.tick}`}
+                  agentName="Cognitive Safety Agent"
+                  recommendation={
+                    isElevated && highestZone
+                      ? `Open Gate C Secondary Entrance to redistribute ${highestZone.name} visitor load.`
+                      : 'Maintain current gate configuration and monitor gate entry flow rates.'
+                  }
+                  confidence={isElevated ? 92 : 98}
+                  reason={
+                    isElevated && highestZone
+                      ? `Entry volume exceeds discharge capacity at ${highestZone.name} by 37%. Delay to resolve this zone results in safety threshold breaches.`
+                      : 'Current flow rates remain within standard deviations of optimal throughput.'
+                  }
+                  expectedImpact={
+                    isElevated
+                      ? 'Queue ↓ 22%, Density ↓ 17%, Est. Recovery: 9 mins.'
+                      : 'Maintains safe operational state.'
+                  }
+                  humanApprovalRequired={isElevated ? true : false}
+                  status={directiveStatus}
+                  onApprove={(id, signature) => {
+                    setDirectiveStatus('approved');
+                    handleSend(
+                      `Proceeding with approved action: "Open Gate C Secondary Entrance" (Signature: ${signature})`,
+                    );
+                  }}
+                  onReject={() => {
+                    setDirectiveStatus('rejected');
+                    handleSend('Directive recommendation rejected by operator override.');
+                  }}
+                />
 
                 {/* Decision Support Option comparisons */}
                 <div className="p-3 bg-surface rounded border border-white/5 space-y-2">
@@ -449,6 +644,7 @@ export function CopilotPanel({ className }: { className?: string }) {
                   </span>
                   <button
                     onClick={handleGenerateBriefing}
+                    aria-label="Regenerate executive briefing"
                     className="bg-brand-primary hover:bg-brand-primary/85 text-slate-950 px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider"
                   >
                     Regenerate

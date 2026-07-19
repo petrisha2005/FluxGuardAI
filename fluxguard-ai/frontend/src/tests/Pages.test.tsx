@@ -180,7 +180,7 @@ describe('CityHubPage', () => {
     resetSimulation();
   });
 
-  it('renders city command center widgets and maps', async () => {
+  it('renders operations digital twin widgets and layouts', async () => {
     render(
       <MemoryRouter>
         <CityHubPage />
@@ -188,9 +188,10 @@ describe('CityHubPage', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: /City Command Center/i }),
+      await screen.findByRole('heading', { name: /Operations Digital Twin/i }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/Active Venues/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Geographic Operations Map/i)).toBeInTheDocument();
+    expect(screen.getByText(/Avg Density/i)).toBeInTheDocument();
+    expect(screen.getByText(/LIVE VENUE COMMAND POST/i)).toBeInTheDocument();
+    expect(screen.getByText(/Real-Time Operations Feed Logs/i)).toBeInTheDocument();
   });
 });
