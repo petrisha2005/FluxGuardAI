@@ -18,11 +18,16 @@ down_revision: Union[str, Sequence[str], None] = 'a9302430bb0e'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-
 def upgrade() -> None:
     # Add columns to users table
-    op.add_column('users', sa.Column('is_active', sa.Boolean(), nullable=True, server_default=sa.text('1')))
-    op.add_column('users', sa.Column('is_verified', sa.Boolean(), nullable=True, server_default=sa.text('0')))
+    op.add_column(
+        'users',
+        sa.Column('is_active', sa.Boolean(), nullable=True, server_default=sa.text('true'))
+    )
+    op.add_column(
+        'users',
+        sa.Column('is_verified', sa.Boolean(), nullable=True, server_default=sa.text('false'))
+    )
     op.add_column('users', sa.Column('last_login', sa.DateTime(), nullable=True))
     op.add_column('users', sa.Column('updated_at', sa.DateTime(), nullable=True))
 
